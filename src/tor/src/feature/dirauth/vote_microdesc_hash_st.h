@@ -18,5 +18,5 @@ struct vote_microdesc_hash_t {
   char *microdesc_hash_line;
 };
 
-#endif /* !defined(VOTE_MICRODESC_HASH_ST_H) */
+#endif
 

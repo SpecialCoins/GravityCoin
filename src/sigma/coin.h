@@ -1,5 +1,5 @@
-#ifndef ZCOIN_SIGMA_COIN_H
-#define ZCOIN_SIGMA_COIN_H
+#ifndef GRAVITYCOIN_SIGMA_COIN_H
+#define GRAVITYCOIN_SIGMA_COIN_H
 
 #include "params.h"
 #include "sigma_primitives.h"
@@ -12,13 +12,14 @@
 namespace sigma {
 
 enum class CoinDenomination : std::uint8_t {
-    SIGMA_DENOM_0_05 = 5,
-    SIGMA_DENOM_0_1 = 0,
-    SIGMA_DENOM_0_5 = 1,
-    SIGMA_DENOM_1 = 2,
-    SIGMA_DENOM_10 = 3,
-    SIGMA_DENOM_25 = 6,
-    SIGMA_DENOM_100 = 4
+    SIGMA_DENOM_X1 = 5,
+    SIGMA_DENOM_X5 = 7,
+    SIGMA_DENOM_X10 = 0,
+    SIGMA_DENOM_X50 = 1,
+    SIGMA_DENOM_X100 = 2,
+    SIGMA_DENOM_X500 = 3,
+    SIGMA_DENOM_X1000 = 6,
+    SIGMA_DENOM_X5000 = 4
 };
 
 // for LogPrintf.
@@ -154,4 +155,4 @@ template<> struct hash<sigma::CoinDenomination> {
 
 }// namespace std
 
-#endif // ZCOIN_SIGMA_COIN_H
+#endif // GRAVITYCOIN_SIGMA_COIN_H

@@ -16,6 +16,9 @@
 #include "txmempool.h"
 #include "ui_interface.h"
 #include "util.h"
+#include "darksend.h"
+#include "xnodeman.h"
+#include "xnode-sync.h"
 
 #include <stdint.h>
 
@@ -32,16 +35,25 @@ ClientModel::ClientModel(OptionsModel *optionsModel, QObject *parent) :
     QObject(parent),
     optionsModel(optionsModel),
     peerTableModel(0),
+    cachedxnodeCountString(""),
     banTableModel(0),
     pollTimer(0),
+    pollMnTimer(0),
+
     lockedExodusStateChanged(false),
     lockedExodusBalanceChanged(false)
+
 {
     peerTableModel = new PeerTableModel(this);
     banTableModel = new BanTableModel(this);
     pollTimer = new QTimer(this);
     connect(pollTimer, SIGNAL(timeout()), this, SLOT(updateTimer()));
     pollTimer->start(MODEL_UPDATE_DELAY);
+
+    pollMnTimer = new QTimer(this);
+    connect(pollMnTimer, SIGNAL(timeout()), this, SLOT(updateMnTimer()));
+    // no need to update as frequent as data for balances/txes/blocks
+    pollMnTimer->start(MODEL_UPDATE_DELAY * 4);
 
     subscribeToCoreSignals();
 }
@@ -63,6 +75,18 @@ int ClientModel::getNumConnections(unsigned int flags) const
             nNum++;
 
     return nNum;
+}
+
+QString ClientModel::getxnodeCountString() const
+{
+    // return tr("Total: %1 (PS compatible: %2 / Enabled: %3) (IPv4: %4, IPv6: %5, TOR: %6)").arg(QString::number((int)mnodeman.size()))
+    return tr("Total: %1 (PS compatible: %2 / Enabled: %3)")
+            .arg(QString::number((int)mnodeman.size()))
+            .arg(QString::number((int)mnodeman.CountEnabled(MIN_PRIVATESEND_PEER_PROTO_VERSION)))
+            .arg(QString::number((int)mnodeman.CountEnabled()));
+            // .arg(QString::number((int)mnodeman.CountByIP(NET_IPV4)))
+            // .arg(QString::number((int)mnodeman.CountByIP(NET_IPV6)))
+            // .arg(QString::number((int)mnodeman.CountByIP(NET_TOR)));
 }
 
 int ClientModel::getNumBlocks() const
@@ -118,6 +142,18 @@ void ClientModel::updateTimer()
     // the following calls will acquire the required lock
     Q_EMIT mempoolSizeChanged(getMempoolSize(), getMempoolDynamicUsage());
     Q_EMIT bytesChanged(getTotalBytesRecv(), getTotalBytesSent());
+}
+
+void ClientModel::updateMnTimer()
+{
+    QString newxnodeCountString = getxnodeCountString();
+
+    if (cachedxnodeCountString != newxnodeCountString)
+    {
+        cachedxnodeCountString = newxnodeCountString;
+
+        Q_EMIT strxnodesChanged(cachedxnodeCountString);
+    }
 }
 
 void ClientModel::updateNumConnections(int numConnections)

@@ -795,8 +795,8 @@ UniValue gettxout(const UniValue& params, bool fHelp)
             "     \"hex\" : \"hex\",        (string) \n"
             "     \"reqSigs\" : n,          (numeric) Number of required signatures\n"
             "     \"type\" : \"pubkeyhash\", (string) The type, eg pubkeyhash\n"
-            "     \"addresses\" : [          (array of string) array of Zcoin addresses\n"
-            "        \"zcoinaddress\"     (string) Zcoin address\n"
+            "     \"addresses\" : [          (array of string) array of GravityCoin addresses\n"
+            "        \"gravitycoinaddress\"     (string) GravityCoin address\n"
             "        ,...\n"
             "     ]\n"
             "  },\n"
@@ -1214,6 +1214,16 @@ UniValue invalidateblock(const UniValue& params, bool fHelp)
     return NullUniValue;
 }
 
+UniValue resetblock(const UniValue& params, bool fHelp)
+{
+    CBlockIndex* const pindexPrev = chainActive.Tip();
+    ResetBlockFailureFlags(pindexPrev);
+    CValidationState state;
+    ActivateBestChain(state, Params());
+
+    return NullUniValue;
+}
+
 UniValue reconsiderblock(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
@@ -1276,6 +1286,7 @@ static const CRPCCommand commands[] =
     /* Not shown in help */
     { "hidden",             "invalidateblock",        &invalidateblock,        true  },
     { "hidden",             "reconsiderblock",        &reconsiderblock,        true  },
+    { "hidden",             "resetblock",             &resetblock,             true  },
 };
 
 void RegisterBlockchainRPCCommands(CRPCTable &tableRPC)

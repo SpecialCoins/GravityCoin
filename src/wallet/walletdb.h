@@ -9,9 +9,8 @@
 
 #include "amount.h"
 #include "primitives/transaction.h"
-#include "primitives/zerocoin.h"
+#include "sigmaentry.h"
 #include "wallet/db.h"
-#include "mnemoniccontainer.h"
 #include "streams.h"
 #include "key.h"
 
@@ -46,9 +45,7 @@ class CWallet;
 class CWalletTx;
 class uint160;
 class uint256;
-class CZerocoinEntry;
 class CSigmaEntry;
-class CZerocoinSpendEntry;
 class CSigmaSpendEntry;
 
 /** Error statuses for the wallet database */
@@ -75,8 +72,7 @@ public:
 
     static const int VERSION_BASIC = 1;
     static const int VERSION_WITH_BIP44 = 10;
-    static const int VERSION_WITH_BIP39 = 11;
-    static const int CURRENT_VERSION = VERSION_WITH_BIP39;
+    static const int CURRENT_VERSION = VERSION_WITH_BIP44;
     static const int N_CHANGES = 4; // standard = 0/1, mint = 2, exodus = 3
     int nVersion;
 
@@ -136,7 +132,6 @@ public:
             return false;
         if(hdKeypath=="m")
             return true;
-
         boost::split(nComponents, hdKeypath, boost::is_any_of("/"), boost::token_compress_on);
         if(nComponents.size()!=ORIGINAL_KEYPATH_SIZE &&
            nComponents.size()!=BIP44_KEYPATH_SIZE)
@@ -234,30 +229,15 @@ public:
     CAmount GetAccountCreditDebit(const std::string& strAccount);
     void ListAccountCreditDebit(const std::string& strAccount, std::list<CAccountingEntry>& acentries);
 
-    bool WriteZerocoinEntry(const CZerocoinEntry& zerocoin);
-    bool WriteSigmaEntry(const CSigmaEntry& zerocoin);
-    bool ReadZerocoinEntry(const Bignum& pub, CZerocoinEntry& entry);
+    bool WriteSigmaEntry(const CSigmaEntry& sigma);
     bool ReadSigmaEntry(const secp_primitives::GroupElement& pub, CSigmaEntry& entry);
-    bool HasZerocoinEntry(const Bignum& pub);
     bool HasSigmaEntry(const secp_primitives::GroupElement& pub);
-    bool EraseZerocoinEntry(const CZerocoinEntry& zerocoin);
     bool EraseSigmaEntry(const CSigmaEntry& sigma);
-    void ListPubCoin(std::list<CZerocoinEntry>& listPubCoin);
     void ListSigmaPubCoin(std::list<CSigmaEntry>& listPubCoin);
-    void ListCoinSpendSerial(std::list<CZerocoinSpendEntry>& listCoinSpendSerial);
     void ListCoinSpendSerial(std::list<CSigmaSpendEntry>& listCoinSpendSerial);
-    bool WriteCoinSpendSerialEntry(const CZerocoinSpendEntry& zerocoinSpend);
     bool WriteCoinSpendSerialEntry(const CSigmaSpendEntry& zerocoinSpend);
-    bool HasCoinSpendSerialEntry(const Bignum& serial);
     bool HasCoinSpendSerialEntry(const secp_primitives::Scalar& serial);
-    bool EraseCoinSpendSerialEntry(const CZerocoinSpendEntry& zerocoinSpend);
     bool EraseCoinSpendSerialEntry(const CSigmaSpendEntry& zerocoinSpend);
-    bool WriteZerocoinAccumulator(libzerocoin::Accumulator accumulator, libzerocoin::CoinDenomination denomination, int pubcoinid);
-    bool ReadZerocoinAccumulator(libzerocoin::Accumulator& accumulator, libzerocoin::CoinDenomination denomination, int pubcoinid);
-    // bool EraseZerocoinAccumulator(libzerocoin::Accumulator& accumulator, libzerocoin::CoinDenomination denomination, int pubcoinid);
-
-    bool ReadCalculatedZCBlock(int& height);
-    bool WriteCalculatedZCBlock(int height);
 
     DBErrors ReorderTransactions(CWallet* pwallet);
     DBErrors LoadWallet(CWallet* pwallet);
@@ -274,9 +254,8 @@ public:
     bool ReadMintSeedCount(int32_t& nCount);
     bool WriteMintSeedCount(const int32_t& nCount);
 
-    bool ArchiveMintOrphan(const CZerocoinEntry& zerocoin);
     bool ArchiveDeterministicOrphan(const CHDMint& dMint);
-    bool UnarchiveSigmaMint(const uint256& hashPubcoin, CSigmaEntry& zerocoin);
+    bool UnarchiveSigmaMint(const uint256& hashPubcoin, CSigmaEntry& sigma);
     bool UnarchiveHDMint(const uint256& hashPubcoin, CHDMint& dMint);
 
     bool WriteHDMint(const CHDMint& dMint);
@@ -296,9 +275,6 @@ public:
 
     //! write the hdchain model (external chain child index counter)
     bool WriteHDChain(const CHDChain& chain);
-    bool WriteMnemonic(const MnemonicContainer& mnContainer);
-
-#ifdef ENABLE_EXODUS
 
     template<class MintPool>
     bool ReadExodusMintPool(MintPool &mintPool)
@@ -411,7 +387,6 @@ public:
 
         cursor->close();
     }
-#endif
 
 private:
     CWalletDB(const CWalletDB&);

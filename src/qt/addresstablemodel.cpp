@@ -98,17 +98,18 @@ public:
                                   QString::fromStdString(strName),
                                   QString::fromStdString(address.ToString())));
             }
-            //[zcoin] add load pubcoin
-            std::list<CZerocoinEntry> listPubcoin;
-            CWalletDB(wallet->strWalletFile).ListPubCoin(listPubcoin);
-            BOOST_FOREACH(const CZerocoinEntry& item, listPubcoin)
+            //GravityCoin add load pubcoin
+            list <CSigmaEntry> listPubcoin;
+            CWalletDB walletdb(pwalletMain->strWalletFile);
+            listPubcoin = zwalletMain->GetTracker().MintsAsSigmaEntries(false, false);
+            BOOST_FOREACH(const CSigmaEntry &SigmaItem, listPubcoin)
             {
-                if(item.randomness != 0 && item.serialNumber != 0){
-                    const std::string& pubCoin = item.value.GetHex();
+                if(SigmaItem.randomness != uint64_t(0) && SigmaItem.serialNumber != uint64_t(0)){
+                    const std::string& pubCoin = SigmaItem.value.GetHex();
                     // const std::string& isUsed = item.IsUsed ? "Used" : "New";
-                    const std::string& isUsedDenomStr = item.IsUsed
-                            ? "Used (" + std::to_string(item.denomination) + " mint)"
-                            : "New (" + std::to_string(item.denomination) + " mint)";
+                    const std::string& isUsedDenomStr = SigmaItem.IsUsed
+                            ? "Used (" + std::to_string(SigmaItem.get_denomination_value()) + " mint)"
+                            : "New (" + std::to_string(SigmaItem.get_denomination_value()) + " mint)";
                     cachedAddressTable.append(AddressTableEntry(AddressTableEntry::Zerocoin,
                                                                 QString::fromStdString(isUsedDenomStr),
                                                                 QString::fromStdString(pubCoin)));
@@ -167,7 +168,7 @@ public:
             break;
         }
     }
-    //[zcoin] updateEntry
+    //GravityCoin updateEntry
     void updateEntry(const QString &pubCoin, const QString &isUsed, int status)
     {
         // Find address / label in model
@@ -402,7 +403,7 @@ void AddressTableModel::updateEntry(const QString &address,
     priv->updateEntry(address, label, isMine, purpose, status);
 }
 
-//[zcoin] AddressTableModel.updateEntry()
+//GravityCoin AddressTableModel.updateEntry()
 void AddressTableModel::updateEntry(const QString &pubCoin, const QString &isUsed, int status)
 {
     // Update stealth address book model from Bitcoin core
@@ -529,7 +530,7 @@ bool AddressTableModel::zerocoinMint(string &stringError, string denomAmount)
         return false;
     }
 
-    return wallet->CreateZerocoinMintModel(stringError, denomAmount, ZEROCOIN);
+    return wallet->CreateZerocoinMintModel(stringError, denomAmount, SIGMA);
 }
 
 bool AddressTableModel::zerocoinSpend(string &stringError, string thirdPartyAddress, string denomAmount)

@@ -57,5 +57,5 @@ struct signed_descriptor_t {
   unsigned int send_unencrypted : 1;
 };
 
-#endif /* !defined(SIGNED_DESCRIPTOR_ST_H) */
+#endif
 

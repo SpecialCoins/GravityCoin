@@ -128,7 +128,7 @@ struct config_line_t;
 char *format_recommended_version_list(const struct config_line_t *line,
                                       int warn);
 
-#else /* !defined(HAVE_MODULE_DIRAUTH) */
+#else /* HAVE_MODULE_DIRAUTH */
 
 static inline time_t
 dirvote_act(const or_options_t *options, time_t now)
@@ -193,7 +193,7 @@ dirvote_add_signatures(const char *detached_signatures_body,
   return 0;
 }
 
-#endif /* defined(HAVE_MODULE_DIRAUTH) */
+#endif /* HAVE_MODULE_DIRAUTH */
 
 /* Item access */
 MOCK_DECL(const char*, dirvote_get_pending_consensus,

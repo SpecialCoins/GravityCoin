@@ -85,11 +85,13 @@ void SigmaPrimitives<Exponent, GroupElement>::new_factor(
         const Exponent& x,
         const Exponent& a,
         std::vector<Exponent>& coefficients) {
-    std::size_t degree = coefficients.size();
-    coefficients.push_back(x * coefficients[degree-1]);
-    for (std::size_t d = degree-1; d >= 1; --d)
-        coefficients[d] = a * coefficients[d] + x * coefficients[d-1];
-    coefficients[0] *= a;
+    std::vector<Exponent> temp;
+    temp.resize(coefficients.size() + 1);
+    for (std::size_t j = 0; j < coefficients.size(); j++)
+        temp[j] = x * coefficients[j];
+    for(std::size_t j = 0; j < coefficients.size(); j++)
+        temp[j + 1] += a * coefficients[j];
+    coefficients = std::move(temp);
 }
 
 } // namespace sigma

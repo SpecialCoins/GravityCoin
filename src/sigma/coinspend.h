@@ -1,5 +1,5 @@
-#ifndef ZCOIN_SIGMA_COINSPEND_H
-#define ZCOIN_SIGMA_COINSPEND_H
+#ifndef SIGMA_COINSPEND_H
+#define SIGMA_COINSPEND_H
 
 #include "coin.h"
 #include "sigmaplus_proof.h"
@@ -16,7 +16,7 @@ public:
     template<typename Stream>
     CoinSpend(const Params* p,  Stream& strm):
         params(p),
-        denomination(CoinDenomination::SIGMA_DENOM_1),
+        denomination(CoinDenomination::SIGMA_DENOM_X1),
         sigmaProof(p->get_n(), p->get_m()) {
             strm >> * this;
         }
@@ -25,8 +25,7 @@ public:
     CoinSpend(const Params* p,
               const PrivateCoin& coin,
               const std::vector<sigma::PublicCoin>& anonymity_set,
-              const SpendMetaData& m,
-              bool fPadding);
+              const SpendMetaData& m);
 
     void updateMetaData(const PrivateCoin& coin, const SpendMetaData& m);
 
@@ -50,7 +49,7 @@ public:
 
     bool HasValidSerial() const;
 
-    bool Verify(const std::vector<sigma::PublicCoin>& anonymity_set, const SpendMetaData &m, bool fPadding) const;
+    bool Verify(const std::vector<sigma::PublicCoin>& anonymity_set, const SpendMetaData &m) const;
 
     ADD_SERIALIZE_METHODS;
     template <typename Stream, typename Operation>
@@ -71,7 +70,7 @@ public:
         READWRITE(ecdsaPubkey);
         READWRITE(ecdsaSignature);
     }
-
+    
     uint256 signatureHash(const SpendMetaData& m) const;
 
 private:
@@ -88,4 +87,4 @@ private:
 
 } //namespace sigma
 
-#endif // ZCOIN_SIGMA_COINSPEND_H
+#endif // SIGMA_COINSPEND_H

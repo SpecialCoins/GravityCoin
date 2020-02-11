@@ -53,6 +53,6 @@ STATIC void next_random_exponential_delay_range(int *low_bound_out,
 /* no more than triple the previous delay */
 #define DIR_TEST_NET_RANDOM_MULTIPLIER (2)
 
-#endif /* defined(DLSTATUS_PRIVATE) */
+#endif
 
 #endif /* !defined(TOR_DLSTATUS_H) */

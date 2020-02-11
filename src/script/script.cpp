@@ -148,7 +148,6 @@ const char* GetOpName(opcodetype opcode)
     case OP_ZEROCOINSPEND          : return "OP_ZEROCOINSPEND";
     case OP_SIGMAMINT         : return "OP_SIGMAMINT";
     case OP_SIGMASPEND        : return "OP_SIGMASPEND";
-    case OP_ZEROCOINTOSIGMAREMINT  : return "OP_ZEROCOINTOSIGMAREMINT";
 
 
     // Note:
@@ -302,11 +301,6 @@ bool CScript::IsSigmaMint() const
 bool CScript::IsSigmaSpend() const {
     return (this->size() > 0 &&
             (*this)[0] == OP_SIGMASPEND);
-}
-
-bool CScript::IsZerocoinRemint() const {
-    return (this->size() > 0 &&
-            (*this)[0] == OP_ZEROCOINTOSIGMAREMINT);
 }
 
 bool CScript::HasCanonicalPushes() const

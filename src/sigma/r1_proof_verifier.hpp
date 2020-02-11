@@ -29,24 +29,18 @@ bool R1ProofVerifier<Exponent,GroupElement>::verify(
         bool skip_final_response_verification) const{
 
     if(!(proof.A_.isMember() &&
-         B_Commit.isMember() &&
+         B_Commit.isMember()  &&
          proof.C_.isMember() &&
-         proof.D_.isMember()) ||
-        (proof.A_.isInfinity() ||
-         B_Commit.isInfinity() ||
-         proof.C_.isInfinity() ||
-         proof.D_.isInfinity()))
+         proof.D_.isMember()))
         return false;
     const std::vector<Exponent>& f = proof.f_;
     for (std::size_t i = 0; i < f.size(); i++) {
-        if(!f[i].isMember() || f[i].isZero())
+        if(!f[i].isMember())
             return false;
     }
 
     if(!(proof.ZA_.isMember() &&
-         proof.ZC_.isMember()) ||
-        (proof.ZA_.isZero() ||
-         proof.ZC_.isZero()))
+         proof.ZC_.isMember()))
         return false;
 
     if (!skip_final_response_verification) {
@@ -64,12 +58,6 @@ bool R1ProofVerifier<Exponent,GroupElement>::verify_final_response(
             const Exponent& challenge_x,
             std::vector<Exponent>& f_out) const {
     const std::vector<Exponent>& f = proof.f_;
-
-    for(unsigned int j = 0; j < f.size(); ++j) {
-        if(f[j] == challenge_x)
-            return false;
-    }
-
     f_out.clear();
     f_out.reserve(n_ * m_);
     for(int j = 0; j < m_; ++j) {

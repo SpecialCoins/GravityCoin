@@ -10,7 +10,6 @@ enum struct AddressType
     , zerocoinSpend = 4
     , sigmaMint = 5
     , sigmaSpend = 6
-    , zerocoinRemint = 7
 };
 
 namespace zerocoin { namespace utils {
@@ -37,10 +36,6 @@ inline bool isSigmaSpend(std::string const & str){
 
 inline bool isSigma(std::string const & str){
     return str == "Sigma";
-}
-
-inline bool isZerocoinRemint(std::string const & str){
-    return str == "Remint";
 }
 
 }}

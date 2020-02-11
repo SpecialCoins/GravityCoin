@@ -30,16 +30,12 @@ TOR_LIBS = tor/src/core/libtor-app.a \
     tor/src/lib/libtor-evloop.a \
     tor/src/lib/libtor-thread.a \
     tor/src/lib/libtor-compress.a \
-    @LIBZSTD@ \
     tor/src/lib/libtor-net.a \
     tor/src/lib/libtor-buf.a \
     tor/src/lib/libtor-time.a \
     tor/src/lib/libtor-err.a \
     tor/src/lib/libtor-log.a \
     tor/src/lib/libtor-version.a \
-    tor/src/lib/libtor-pubsub.a \
-    tor/src/lib/libtor-dispatch.a \
-    tor/src/lib/libtor-confmgt.a \
     tor/src/lib/libtor-container.a \
     tor/src/lib/libtor-crypt-ops.a \
     tor/src/lib/libtor-fs.a \
@@ -88,10 +84,10 @@ LIBBITCOIN_CONSENSUS=libbitcoin_consensus.a
 LIBBITCOIN_CLI=libbitcoin_cli.a
 LIBBITCOIN_UTIL=libbitcoin_util.a
 LIBBITCOIN_CRYPTO=crypto/libbitcoin_crypto.a
-LIBBITCOINQT=qt/libzcoinqt.a
+LIBBITCOINQT=qt/libGravityCoinqt.a
 LIBSECP256K1=secp256k1/libsecp256k1.la
 
-LIBZCOIN_SIGMA=libsigma.a
+LIBGRAVITYCOIN_SIGMA=libsigma.a
 
 if ENABLE_ZMQ
 LIBBITCOIN_ZMQ=libbitcoin_zmq.a
@@ -119,7 +115,7 @@ EXTRA_LIBRARIES += \
   $(LIBBITCOIN_CLI) \
   $(LIBBITCOIN_WALLET) \
   $(LIBBITCOIN_ZMQ) \
-  $(LIBZCOIN_SIGMA)
+  $(LIBGRAVITYCOIN_SIGMA)
 
 lib_LTLIBRARIES = $(LIBBITCOINCONSENSUS)
 
@@ -129,17 +125,17 @@ TESTS =
 BENCHMARKS =
 
 if BUILD_BITCOIND
-  bin_PROGRAMS += zcoind
+  bin_PROGRAMS += GravityCoind
 endif
 
 if BUILD_BITCOIN_UTILS
-  bin_PROGRAMS += zcoin-cli zcoin-tx
+  bin_PROGRAMS += GravityCoin-cli GravityCoin-tx
 endif
 
 .PHONY: FORCE check-symbols check-security
 # bitcoin core #
 BITCOIN_CORE_H = \
-  activeznode.h \
+  activexnode.h \
   addressindex.h \
   spentindex.h \
   addrman.h \
@@ -176,11 +172,11 @@ BITCOIN_CORE_H = \
   limitedmap.h \
   threadinterrupt.h \
   main.h \
-  znode.h \
-  znode-payments.h \
-  znode-sync.h \
-  znodeman.h \
-  znodeconfig.h \
+  xnode.h \
+  xnode-payments.h \
+  xnode-sync.h \
+  xnodeman.h \
+  xnodeconfig.h \
   mbstring.h \
   memusage.h \
   merkleblock.h \
@@ -192,7 +188,7 @@ BITCOIN_CORE_H = \
   policy/fees.h \
   policy/policy.h \
   policy/rbf.h \
-  primitives/zerocoin.h \
+  sigmaentry.h \
   fixed.h \
   pow.h \
   hdmint/hdmint.h \
@@ -227,7 +223,6 @@ BITCOIN_CORE_H = \
   validation.h \
   validationinterface.h \
   versionbits.h \
-  wallet/mnemoniccontainer.h \
   wallet/crypter.h \
   wallet/db.h \
   wallet/rpcwallet.h \
@@ -237,8 +232,6 @@ BITCOIN_CORE_H = \
   wallet/walletexcept.h \
   wallet/walletdb.h \
   wallet/authhelper.h \
-  wallet/bip39.h \
-  wallet/bip39_english.h \
   definition.h \
   zmq/zmqabstractnotifier.h \
   zmq/zmqconfig.h\
@@ -247,12 +240,10 @@ BITCOIN_CORE_H = \
   hdmint/mintpool.h \
   hdmint/tracker.h \
   hdmint/wallet.h \
-  zerocoin.h \
   sigma.h \
   coin_containers.h \
-  zerocoin_params.h \
-  addresstype.h \
-  mtpstate.h
+  sigma_params.h \
+  addresstype.h
 
 obj/build.h: FORCE
 	@$(MKDIR_P) $(builddir)/obj
@@ -260,7 +251,7 @@ obj/build.h: FORCE
 	  $(abs_top_srcdir)
 libbitcoin_util_a-clientversion.$(OBJEXT): obj/build.h
 
-# server: shared between zcoind and zcoin-qt
+# server: shared between GravityCoind and GravityCoin-qt
 libbitcoin_server_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(MINIUPNPC_CPPFLAGS) $(EVENT_CFLAGS) $(EVENT_PTHREADS_CFLAGS)
 libbitcoin_server_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_server_a_SOURCES = \
@@ -282,7 +273,7 @@ libbitcoin_server_a_SOURCES = \
   noui.cpp \
   policy/fees.cpp \
   policy/policy.cpp \
-  primitives/zerocoin.cpp \
+  sigmaentry.cpp \
   pow.cpp \
   rest.cpp \
   rpc/blockchain.cpp \
@@ -290,7 +281,7 @@ libbitcoin_server_a_SOURCES = \
   rpc/misc.cpp \
   rpc/net.cpp \
   rpc/rawtransaction.cpp \
-  rpc/rpcznode.cpp \
+  rpc/rpcxnode.cpp \
   rpc/server.cpp \
   script/sigcache.cpp \
   script/ismine.cpp \
@@ -302,10 +293,8 @@ libbitcoin_server_a_SOURCES = \
   validation.cpp \
   validationinterface.cpp \
   versionbits.cpp \
-  zerocoin.cpp \
   sigma.cpp \
   coin_containers.cpp \
-  mtpstate.cpp \
   $(BITCOIN_CORE_H)
 
 if ENABLE_ZMQ
@@ -318,26 +307,21 @@ libbitcoin_zmq_a_SOURCES = \
 endif
 
 
-# wallet: shared between zcoind and zcoin-qt, but only linked
+# wallet: shared between GravityCoind and GravityCoin-qt, but only linked
 # when wallet enabled
 libbitcoin_wallet_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
 libbitcoin_wallet_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_wallet_a_SOURCES = \
-  activeznode.cpp \
+  activexnode.cpp \
   darksend.cpp \
-  hdmint/hdmint.cpp \
-  znode.cpp \
+  xnode.cpp \
   instantx.cpp \
-  znode-payments.cpp \
-  znode-sync.cpp \
-  znodeconfig.cpp \
-  znodeman.cpp \
-  hdmint/mintpool.cpp \
-  hdmint/wallet.cpp \
+  xnode-payments.cpp \
+  xnode-sync.cpp \
+  xnodeconfig.cpp \
+  xnodeman.cpp \
   sigma.cpp \
   wallet/crypter.cpp \
-  wallet/bip39.cpp \
-  wallet/mnemoniccontainer.cpp \
   wallet/db.cpp \
   wallet/rpcdump.cpp \
   wallet/rpcwallet.cpp \
@@ -347,9 +331,12 @@ libbitcoin_wallet_a_SOURCES = \
   wallet/wallet.cpp \
   wallet/walletdb.cpp \
   wallet/authhelper.cpp \
-  hdmint/tracker.cpp \
   policy/rbf.cpp \
-  primitives/zerocoin.cpp \
+  sigmaentry.cpp \
+  hdmint/hdmint.cpp \
+  hdmint/mintpool.cpp \
+  hdmint/wallet.cpp \
+  hdmint/tracker.cpp \
   $(BITCOIN_CORE_H)
 
 # crypto primitives library
@@ -391,7 +378,6 @@ libbitcoin_consensus_a_SOURCES = \
   prevector.h \
   crypto/scrypt.h \
   primitives/block.h \
-  primitives/precomputed_hash.h \
   primitives/transaction.cpp \
   primitives/transaction.h \
   pubkey.cpp \
@@ -420,23 +406,9 @@ libbitcoin_consensus_a_SOURCES = \
   crypto/Lyra2Z/sph_blake.h \
   crypto/Lyra2Z/sph_types.h \
   crypto/Lyra2Z/Sponge.c \
-  crypto/Lyra2Z/Sponge.h \
-  crypto/MerkleTreeProof/mtp.h \
-  crypto/MerkleTreeProof/argon2.h \
-  crypto/MerkleTreeProof/thread.h \
-  crypto/MerkleTreeProof/merkle-tree.hpp \
-  crypto/MerkleTreeProof/core.h \
-  crypto/MerkleTreeProof/ref.h \
-  crypto/MerkleTreeProof/blake2/blake2.h \
-  crypto/MerkleTreeProof/blake2/blamka-round-opt.h \
-  crypto/MerkleTreeProof/blake2/blake2-impl.h \
-  crypto/MerkleTreeProof/blake2/blamka-round-ref.h \
-  crypto/MerkleTreeProof/thread.c \
-  crypto/MerkleTreeProof/core.c \
-  crypto/MerkleTreeProof/ref.c \
-  crypto/MerkleTreeProof/blake2/blake2b.c
+  crypto/Lyra2Z/Sponge.h
 
-# common: shared between zcoind, and zcoin-qt and non-server tools
+# common: shared between GravityCoind, and GravityCoin-qt and non-server tools
 libbitcoin_common_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
 libbitcoin_common_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_common_a_SOURCES = \
@@ -448,7 +420,6 @@ libbitcoin_common_a_SOURCES = \
   compressor.cpp \
   core_read.cpp \
   core_write.cpp \
-  hdmint/hdmint.cpp \
   key.cpp \
   keystore.cpp \
   netbase.cpp \
@@ -457,6 +428,7 @@ libbitcoin_common_a_SOURCES = \
   script/sign.cpp \
   script/standard.cpp \
   spork.cpp \
+  hdmint/hdmint.cpp \
   $(BITCOIN_CORE_H)
 
 # util: shared between all executables.
@@ -508,8 +480,6 @@ libbitcoin_util_a_SOURCES = \
   libzerocoin/SpendMetaData.h \
   libzerocoin/SpendMetaData.cpp \
   libzerocoin/Zerocoin.h \
-  crypto/MerkleTreeProof/mtp.cpp \
-  crypto/MerkleTreeProof/merkle-tree.cpp \
   $(BITCOIN_CORE_H)
 
 libsigma_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) -Werror
@@ -533,19 +503,15 @@ libsigma_a_SOURCES = \
   sigma/coinspend.h \
   sigma/spend_metadata.cpp \
   sigma/spend_metadata.h \
-  sigma/remint.h \
-  sigma/remint.cpp \
-  sigma/remint-blacklist.cpp \
   sigma/params.h \
   sigma/params.cpp \
   sigma/openssl_context.h
 
 if GLIBC_BACK_COMPAT
 libbitcoin_util_a_SOURCES += compat/glibc_compat.cpp
-AM_LDFLAGS += $(COMPAT_LDFLAGS)
 endif
 
-# cli: shared between zcoin-cli and zcoin-qt
+# cli: shared between GravityCoin-cli and GravityCoin-qt
 libbitcoin_cli_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
 libbitcoin_cli_a_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 libbitcoin_cli_a_SOURCES = \
@@ -556,22 +522,22 @@ nodist_libbitcoin_util_a_SOURCES = $(srcdir)/obj/build.h
 #
 
 # bitcoind binary #
-zcoind_SOURCES = bitcoind.cpp
-zcoind_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-zcoind_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-zcoind_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+GravityCoind_SOURCES = bitcoind.cpp
+GravityCoind_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+GravityCoind_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+GravityCoind_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-zcoind_SOURCES += bitcoind-res.rc
+GravityCoind_SOURCES += bitcoind-res.rc
 endif
 
-zcoind_LDADD = \
+GravityCoind_LDADD = \
   $(LIBBITCOIN_SERVER) \
   $(LIBBITCOIN_COMMON) \
   $(LIBUNIVALUE) \
   $(LIBBITCOIN_UTIL) \
   $(LIBBITCOIN_WALLET) \
-  $(LIBZCOIN_SIGMA) \
+  $(LIBGRAVITYCOIN_SIGMA) \
   $(LIBBITCOIN_ZMQ) \
   $(LIBBITCOIN_CONSENSUS) \
   $(LIBBITCOIN_CRYPTO) \
@@ -581,38 +547,38 @@ zcoind_LDADD = \
 
 
 
-zcoind_LDADD += $(TOR_LIBS) $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS) -lz
+GravityCoind_LDADD += $(TOR_LIBS) $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS) $(ZMQ_LIBS) -lz
 
 # bitcoin-cli binary #
-zcoin_cli_SOURCES = bitcoin-cli.cpp
-zcoin_cli_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(EVENT_CFLAGS)
-zcoin_cli_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-zcoin_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+GravityCoin_cli_SOURCES = bitcoin-cli.cpp
+GravityCoin_cli_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(EVENT_CFLAGS)
+GravityCoin_cli_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+GravityCoin_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-zcoin_cli_SOURCES += bitcoin-cli-res.rc
+GravityCoin_cli_SOURCES += bitcoin-cli-res.rc
 endif
 
-zcoin_cli_LDADD = \
+GravityCoin_cli_LDADD = \
   $(LIBBITCOIN_CLI) \
   $(LIBUNIVALUE) \
   $(LIBBITCOIN_UTIL) \
   $(LIBBITCOIN_CRYPTO)
 
-zcoin_cli_LDADD += $(BOOST_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS)
+GravityCoin_cli_LDADD += $(BOOST_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS)
 #
 
 # bitcoin-tx binary #
-zcoin_tx_SOURCES = bitcoin-tx.cpp
-zcoin_tx_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-zcoin_tx_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-zcoin_tx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+GravityCoin_tx_SOURCES = bitcoin-tx.cpp
+GravityCoin_tx_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+GravityCoin_tx_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+GravityCoin_tx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-zcoin_tx_SOURCES += bitcoin-tx-res.rc
+GravityCoin_tx_SOURCES += bitcoin-tx-res.rc
 endif
 
-zcoin_tx_LDADD = \
+GravityCoin_tx_LDADD = \
   $(LIBUNIVALUE) \
   $(LIBBITCOIN_COMMON) \
   $(LIBBITCOIN_UTIL) \
@@ -620,7 +586,7 @@ zcoin_tx_LDADD = \
   $(LIBBITCOIN_CRYPTO) \
   $(LIBSECP256K1)
 
-zcoin_tx_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS)
+GravityCoin_tx_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS)
 #
 
 # bitcoinconsensus library #
@@ -686,13 +652,13 @@ clean-local:
 check-symbols: $(bin_PROGRAMS)
 if GLIBC_BACK_COMPAT
 	@echo "Checking glibc back compat..."
-	$(AM_V_at) READELF=$(READELF) CPPFILT=$(CPPFILT) $(PYTHON) $(top_srcdir)/contrib/devtools/symbol-check.py < $(bin_PROGRAMS)
+	$(AM_V_at) READELF=$(READELF) CPPFILT=$(CPPFILT) $(top_srcdir)/contrib/devtools/symbol-check.py < $(bin_PROGRAMS)
 endif
 
 check-security: $(bin_PROGRAMS)
 if HARDEN
 	@echo "Checking binary security..."
-	$(AM_V_at) READELF=$(READELF) OBJDUMP=$(OBJDUMP) $(PYTHON) $(top_srcdir)/contrib/devtools/security-check.py < $(bin_PROGRAMS)
+	$(AM_V_at) READELF=$(READELF) OBJDUMP=$(OBJDUMP) $(top_srcdir)/contrib/devtools/security-check.py < $(bin_PROGRAMS)
 endif
 
 %.pb.cc %.pb.h: %.proto
@@ -707,13 +673,6 @@ if ENABLE_QT
 include Makefile.qt.include
 endif
 
-if ENABLE_TESTS
-include Makefile.test.include
-else
-check-local:
-	$(error Please rerun configure with tests enabling flag)
-endif
-
-if ENABLE_EXODUS
+# Exodus
 include Makefile.exodus.include
-endif
+#

@@ -108,7 +108,6 @@ SigmaDialog::SigmaDialog(const PlatformStyle *platformStyle, QWidget *parent) :
     ui->labelCoinControlChange->addAction(clipboardChangeAction);
 
     ui->amountToMint->setLocale(QLocale::c());
-    connect(ui->amountToMint, SIGNAL(valueChanged(double)), this, SLOT(coinControlUpdateLabels()));
 
     //check if user clicked at a tab
     connect(ui->tabWidget, SIGNAL(currentChanged(int)), this, SLOT(tabSelected()));
@@ -119,8 +118,7 @@ void SigmaDialog::setClientModel(ClientModel *model)
     this->clientModel = model;
 
     if (model) {
-        bool sigmaAllowed = sigma::IsSigmaAllowed(model->getNumBlocks());
-
+        bool sigmaAllowed = sigma::IsSigmaAllowed();
         connect(model, SIGNAL(numBlocksChanged(int, const QDateTime&, double, bool)), this, SLOT(numBlocksChanged(int, const QDateTime&, double, bool)));
 
         ui->mintButton->setEnabled(sigmaAllowed);
@@ -134,9 +132,8 @@ void SigmaDialog::setWalletModel(WalletModel *model)
 
     if (model && model->getOptionsModel()) {
         connect(model, SIGNAL(balanceChanged(CAmount, CAmount, CAmount, CAmount, CAmount, CAmount)),
-            this, SLOT(updateMintableBalance()));
-        connect(model, SIGNAL(updateMintable()), this, SLOT(updateMintableBalance()));
-        updateMintableBalance();
+            this, SLOT(updateAvailableToMintBalance(CAmount)));
+        updateAvailableToMintBalance(model->getBalance());
         connect(model, SIGNAL(notifySigmaChanged(const std::vector<CMintMeta>, const std::vector<CMintMeta>)),
             this, SLOT(updateCoins(const std::vector<CMintMeta>, const std::vector<CMintMeta>)));
         model->checkSigmaAmount(true);
@@ -168,9 +165,6 @@ void SigmaDialog::tabSelected(){
         if(coinControlSelected)
             ui->coinControlChange->hide();
     }
-    // reset the coin control window on a tab change (preserves the backend so the state is the same when returning)
-    if(coinControlSelected)
-        coinControlUpdateLabels();
 }
 
 SigmaDialog::~SigmaDialog()
@@ -181,8 +175,7 @@ SigmaDialog::~SigmaDialog()
 void SigmaDialog::numBlocksChanged(int count, const QDateTime& blockDate, double nVerificationProgress, bool header)
 {
     if (!header) {
-        bool sigmaAllowed = sigma::IsSigmaAllowed(count);
-
+        bool sigmaAllowed = sigma::IsSigmaAllowed();
         ui->mintButton->setEnabled(sigmaAllowed);
         ui->sendButton->setEnabled(sigmaAllowed);
     }
@@ -209,7 +202,7 @@ void SigmaDialog::on_mintButton_clicked()
 
     if (amount < smallestDenominationValue) {
         QMessageBox::critical(this, tr("Amount too small to mint"),
-            tr("Amount to mint must not be lower than %1 XZC.").arg(formatAmount(smallestDenominationValue)),
+            tr("Amount to mint must not be lower than %1 GXX.").arg(formatAmount(smallestDenominationValue)),
             QMessageBox::Ok, QMessageBox::Ok);
         return;
     }
@@ -218,7 +211,7 @@ void SigmaDialog::on_mintButton_clicked()
         amount -= amount % smallestDenominationValue;
         auto reply = QMessageBox::question(
             this, tr("Unable to mint."),
-            tr("Amount to mint must be a multiple of 0.05 XZC. Do you want to mint %1 XZC?"
+            tr("Amount to mint must be a multiple of 0.05 GXX. Do you want to spend %1 GXX?"
             ).arg(formatAmount(amount)));
 
         if (reply == QMessageBox::No) {
@@ -469,15 +462,11 @@ void SigmaDialog::accept()
     clear();
 }
 
-void SigmaDialog::reject(){}
-
 SendCoinsEntry *SigmaDialog::addEntry() {
     SendCoinsEntry *entry = new SendCoinsEntry(platformStyle, this);
     entry->setModel(walletModel);
     ui->entries->addWidget(entry);
     connect(entry, SIGNAL(removeEntry(SendCoinsEntry*)), this, SLOT(removeEntry(SendCoinsEntry*)));
-    connect(entry, SIGNAL(payAmountChanged()), this, SLOT(coinControlUpdateLabels()));
-    connect(entry, SIGNAL(subtractFeeFromAmountChanged()), this, SLOT(coinControlUpdateLabels()));
 
     // Focus the field, so that entry can start immediately
     entry->clear();
@@ -515,11 +504,6 @@ void SigmaDialog::updateAvailableToMintBalance(const CAmount& balance)
 {
     QString formattedBalance = BitcoinUnits::formatHtmlWithUnit(walletModel->getOptionsModel()->getDisplayUnit(), balance);
     ui->availableAmount->setText(formattedBalance);
-}
-
-void SigmaDialog::updateMintableBalance()
-{
-    updateAvailableToMintBalance(this->walletModel->getBalance(NULL, true));
 }
 
 // Coin Control: copy label "Quantity" to clipboard
@@ -579,22 +563,17 @@ void SigmaDialog::coinControlUpdateLabels()
     // set pay amounts
     SigmaCoinControlDialog::payAmounts.clear();
     SigmaCoinControlDialog::fSubtractFeeFromAmount = false;
-    if(SigmaCoinControlDialog::fMintTabSelected){
-        SigmaCoinControlDialog::payAmounts.append(ui->amountToMint->value() * COIN);
-    }else{
-        for(int i = 0; i < ui->entries->count(); ++i)
+    for(int i = 0; i < ui->entries->count(); ++i)
+    {
+        SendCoinsEntry *entry = qobject_cast<SendCoinsEntry*>(ui->entries->itemAt(i)->widget());
+        if(entry && !entry->isHidden())
         {
-            SendCoinsEntry *entry = qobject_cast<SendCoinsEntry*>(ui->entries->itemAt(i)->widget());
-            if(entry && !entry->isHidden())
-            {
-                SendCoinsRecipient rcp = entry->getValue();
-                SigmaCoinControlDialog::payAmounts.append(rcp.amount);
-                if (rcp.fSubtractFeeFromAmount)
-                    SigmaCoinControlDialog::fSubtractFeeFromAmount = true;
-            }
+            SendCoinsRecipient rcp = entry->getValue();
+            SigmaCoinControlDialog::payAmounts.append(rcp.amount);
+            if (rcp.fSubtractFeeFromAmount)
+                SigmaCoinControlDialog::fSubtractFeeFromAmount = true;
         }
     }
-
 
     if (SigmaCoinControlDialog::coinControl->HasSelected())
     {
@@ -656,7 +635,7 @@ void SigmaDialog::coinControlChangeEdited(const QString& text)
         }
         else if (!addr.IsValid()) // Invalid address
         {
-            ui->labelCoinControlChangeLabel->setText(tr("Warning: Invalid Zcoin address"));
+            ui->labelCoinControlChangeLabel->setText(tr("Warning: Invalid GravityCoin address"));
         }
         else // Valid address
         {
@@ -733,10 +712,6 @@ void SigmaDialog::processSpendCoinsReturn(const WalletModel::SendCoinsReturn &se
     case WalletModel::DuplicateAddress:
         msgParams.first = tr("Duplicate address found: addresses should only be used once each.");
         break;
-    case WalletModel::SigmaDisabled:
-        msgParams.first = tr("Sigma is disabled at this period!");
-        msgParams.second = CClientUIInterface::MSG_ERROR;
-        break;
     case WalletModel::TransactionCreationFailed:
         msgParams.first = tr("Transaction creation failed!");
         msgParams.second = CClientUIInterface::MSG_ERROR;
@@ -753,7 +728,7 @@ void SigmaDialog::processSpendCoinsReturn(const WalletModel::SendCoinsReturn &se
         msgParams.second = CClientUIInterface::MSG_ERROR;
         break;
     case WalletModel::ExceedLimit:
-        msgParams.first = tr("Transaction exceeds max number of spends (35) or value (500 XZC per transaction), please reduce the amount you wish to spend.");
+        msgParams.first = tr("Transaction exceeds max number of spends (100) or value (5000 GXX per transaction), please reduce the amount you wish to spend.");
         msgParams.second = CClientUIInterface::MSG_ERROR;
         break;
     // included to prevent a compiler warning.
@@ -794,21 +769,23 @@ void SigmaDialog::updateCoins(const std::vector<CMintMeta>& spendable, const std
     }
 
     // update coins amount
-    int denom100Amount = spendableDenominationCoins[sigma::CoinDenomination::SIGMA_DENOM_100];
-    int denom25Amount = spendableDenominationCoins[sigma::CoinDenomination::SIGMA_DENOM_25];
-    int denom10Amount = spendableDenominationCoins[sigma::CoinDenomination::SIGMA_DENOM_10];
-    int denom1Amount = spendableDenominationCoins[sigma::CoinDenomination::SIGMA_DENOM_1];
-    int denom05Amount = spendableDenominationCoins[sigma::CoinDenomination::SIGMA_DENOM_0_5];
-    int denom01Amount = spendableDenominationCoins[sigma::CoinDenomination::SIGMA_DENOM_0_1];
-    int denom005Amount = spendableDenominationCoins[sigma::CoinDenomination::SIGMA_DENOM_0_05];
+    int denomX5000Amount = spendableDenominationCoins[sigma::CoinDenomination::SIGMA_DENOM_X5000];
+    int denomX1000Amount = spendableDenominationCoins[sigma::CoinDenomination::SIGMA_DENOM_X1000];
+    int denomX500Amount = spendableDenominationCoins[sigma::CoinDenomination::SIGMA_DENOM_X500];
+    int denomX100Amount = spendableDenominationCoins[sigma::CoinDenomination::SIGMA_DENOM_X100];
+    int denomX50Amount = spendableDenominationCoins[sigma::CoinDenomination::SIGMA_DENOM_X50];
+    int denomX10Amount = spendableDenominationCoins[sigma::CoinDenomination::SIGMA_DENOM_X10];
+    int denomX5Amount = spendableDenominationCoins[sigma::CoinDenomination::SIGMA_DENOM_X5];
+    int denomX1Amount = spendableDenominationCoins[sigma::CoinDenomination::SIGMA_DENOM_X1];
 
-    ui->amountDenom100->setText(QString::fromStdString(std::to_string(denom100Amount)));
-    ui->amountDenom25->setText(QString::fromStdString(std::to_string(denom25Amount)));
-    ui->amountDenom10->setText(QString::fromStdString(std::to_string(denom10Amount)));
-    ui->amountDenom1->setText(QString::fromStdString(std::to_string(denom1Amount)));
-    ui->amountDenom05->setText(QString::fromStdString(std::to_string(denom05Amount)));
-    ui->amountDenom01->setText(QString::fromStdString(std::to_string(denom01Amount)));
-    ui->amountDenom005->setText(QString::fromStdString(std::to_string(denom005Amount)));
+    ui->amountDenomX5000->setText(QString::fromStdString(std::to_string(denomX5000Amount)));
+    ui->amountDenomX1000->setText(QString::fromStdString(std::to_string(denomX1000Amount)));
+    ui->amountDenomX500->setText(QString::fromStdString(std::to_string(denomX500Amount)));
+    ui->amountDenomX100->setText(QString::fromStdString(std::to_string(denomX100Amount)));
+    ui->amountDenomX50->setText(QString::fromStdString(std::to_string(denomX50Amount)));
+    ui->amountDenomX10->setText(QString::fromStdString(std::to_string(denomX10Amount)));
+    ui->amountDenomX5->setText(QString::fromStdString(std::to_string(denomX5Amount)));
+    ui->amountDenomX1->setText(QString::fromStdString(std::to_string(denomX1Amount)));
 
     CAmount pendingSum(0);
     for (const auto& c : pending) {

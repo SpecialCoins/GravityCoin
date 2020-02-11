@@ -1,15 +1,15 @@
-// Copyright (c) 2019 The Zcoin Core Developers
+// Copyright (c) 2019 The GravityCoin Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef ZCOIN_HDMINTWALLET_H
-#define ZCOIN_HDMINTWALLET_H
+#ifndef GRAVITYCOIN_HDMINTWALLET_H
+#define GRAVITYCOIN_HDMINTWALLET_H
 
 #include <map>
 #include "libzerocoin/Zerocoin.h"
 #include "hdmint/mintpool.h"
 #include "uint256.h"
-#include "primitives/zerocoin.h"
+#include "sigmaentry.h"
 #include "wallet/wallet.h"
 #include "tracker.h"
 
@@ -57,4 +57,4 @@ private:
     bool CreateMintSeed(uint512& mintSeed, const int32_t& n, CKeyID& seedId);
 };
 
-#endif //ZCOIN_HDMINTWALLET_H
+#endif //GRAVITYCOIN_HDMINTWALLET_H

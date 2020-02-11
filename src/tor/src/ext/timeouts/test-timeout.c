@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <limits.h>
 
-#include "ext/timeouts/timeout.h"
+#include "timeout.h"
 
 #define THE_END_OF_TIME ((timeout_t)-1)
 

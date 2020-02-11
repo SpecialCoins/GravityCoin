@@ -25,7 +25,7 @@
 #include <openssl/kdf.h>
 #define HAVE_OPENSSL_HKDF 1
 #endif
-#endif /* defined(ENABLE_OPENSSL) */
+#endif
 
 #include <string.h>
 
@@ -109,7 +109,7 @@ crypto_expand_key_material_rfc5869_sha256_openssl(
   return 0;
 }
 
-#else /* !defined(HAVE_OPENSSL_HKDF) */
+#else
 
 /**
  * Perform RFC5869 HKDF computation using our own legacy implementation.
@@ -166,7 +166,7 @@ crypto_expand_key_material_rfc5869_sha256_legacy(
   memwipe(mac, 0, sizeof(mac));
   return 0;
 }
-#endif /* defined(HAVE_OPENSSL_HKDF) */
+#endif
 
 /** Expand some secret key material according to RFC5869, using SHA256 as the
  * underlying hash.  The <b>key_in_len</b> bytes at <b>key_in</b> are the
@@ -191,11 +191,11 @@ crypto_expand_key_material_rfc5869_sha256(
                                              salt_in_len, info_in,
                                              info_in_len,
                                              key_out, key_out_len);
-#else /* !defined(HAVE_OPENSSL_HKDF) */
+#else
   return crypto_expand_key_material_rfc5869_sha256_legacy(key_in,
                                                key_in_len, salt_in,
                                                salt_in_len, info_in,
                                                info_in_len,
                                                key_out, key_out_len);
-#endif /* defined(HAVE_OPENSSL_HKDF) */
+#endif
 }

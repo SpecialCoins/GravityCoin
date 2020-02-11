@@ -324,9 +324,6 @@ bool CBlockTreeDB::LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256
         if (pcursor->GetKey(key) && key.first == DB_BLOCK_INDEX) {
             CDiskBlockIndex diskindex;
             if (pcursor->GetValue(diskindex)) {
-                // Construct block index object
-            	//if(diskindex.hashBlock != uint256()
-            	//	&& diskindex.hashPrev != uint256()){
                 CBlockIndex* pindexNew    = insertBlockIndex(diskindex.GetBlockHash());
                 pindexNew->pprev 		  = insertBlockIndex(diskindex.hashPrev);
 
@@ -341,25 +338,8 @@ bool CBlockTreeDB::LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256
                 pindexNew->nNonce         = diskindex.nNonce;
                 pindexNew->nStatus        = diskindex.nStatus;
                 pindexNew->nTx            = diskindex.nTx;
-
-                // Zcoin - MTP
-                if (diskindex.nTime > ZC_GENESIS_BLOCK_TIME && diskindex.nTime >= consensusParams.nMTPSwitchTime) {
-                    pindexNew->nVersionMTP = diskindex.nVersionMTP;
-                    pindexNew->mtpHashValue = diskindex.mtpHashValue;
-                    pindexNew->reserved[0] = diskindex.reserved[0];
-                    pindexNew->reserved[1] = diskindex.reserved[1];
-                }
-
-                pindexNew->accumulatorChanges = diskindex.accumulatorChanges;
-                pindexNew->mintedPubCoins     = diskindex.mintedPubCoins;
-                pindexNew->spentSerials       = diskindex.spentSerials;
-
                 pindexNew->sigmaMintedPubCoins   = diskindex.sigmaMintedPubCoins;
                 pindexNew->sigmaSpentSerials     = diskindex.sigmaSpentSerials;
-
-                if (!CheckProofOfWork(pindexNew->GetBlockPoWHash(), pindexNew->nBits, consensusParams))
-                    if (!CheckProofOfWork(pindexNew->GetBlockPoWHash(true), pindexNew->nBits, consensusParams))
-                        return error("LoadBlockIndex(): CheckProofOfWork failed: %s", pindexNew->ToString());
 
                 pcursor->Next();
             } else {
@@ -398,8 +378,6 @@ int CBlockTreeDB::GetBlockIndexVersion(uint256 const & blockHash)
             CDiskBlockIndex diskindex;
             if (pcursor->GetValue(diskindex))
                 return diskindex.nDiskBlockVersion;
-        } else {
-	    break;
         }
     }
     return -1;
@@ -489,22 +467,6 @@ void handleInput(CTxIn const & input, size_t inputNo, uint256 const & txHash, in
         spentIndex->push_back(make_pair(CSpentIndexKey(input.prevout.hash, input.prevout.n), CSpentIndexValue(txHash, inputNo, height, prevout.nValue, addrType.first, addrType.second)));
 }
 
-void handleRemint(CTxIn const & input, uint256 const & txHash, int height, int txNumber, CAmount nValue,
-        AddressIndexPtr & addressIndex, AddressUnspentIndexPtr & addressUnspentIndex, SpentIndexPtr & spentIndex)
-{
-    if(!input.IsZerocoinRemint())
-        return;
-
-    if (addressIndex) {
-        addressIndex->push_back(make_pair(CAddressIndexKey(AddressType::zerocoinRemint, uint160(), height, txNumber, txHash, 0, true), nValue * -1));
-        addressUnspentIndex->push_back(make_pair(CAddressUnspentKey(AddressType::zerocoinRemint, uint160(), input.prevout.hash, input.prevout.n), CAddressUnspentValue()));
-    }
-
-    if (spentIndex)
-        spentIndex->push_back(make_pair(CSpentIndexKey(input.prevout.hash, input.prevout.n), CSpentIndexValue(txHash, 0, height, nValue, AddressType::zerocoinRemint, uint160())));
-}
-
-
 template <class Iterator>
 void handleZerocoinSpend(Iterator const begin, Iterator const end, uint256 const & txHash, int height, int txNumber, CCoinsViewCache const & view,
         AddressIndexPtr & addressIndex, bool isV3)
@@ -554,22 +516,10 @@ void handleOutput(const CTxOut &out, size_t outNo, uint256 const & txHash, int h
 void CDbIndexHelper::ConnectTransaction(CTransaction const & tx, int height, int txNumber, CCoinsViewCache const & view)
 {
     size_t no = 0;
-    if(!tx.IsCoinBase() && !tx.IsZerocoinSpend() && !tx.IsSigmaSpend() && !tx.IsZerocoinRemint()) {
+    if(!tx.IsCoinBase() && !tx.IsZerocoinSpend() && !tx.IsSigmaSpend()) {
         for (CTxIn const & input : tx.vin) {
             handleInput(input, no++, tx.GetHash(), height, txNumber, view, addressIndex, addressUnspentIndex, spentIndex);
         }
-    }
-
-    if(tx.IsZerocoinRemint()) {
-        CAmount remintValue = 0;
-        for (CTxOut const & out : tx.vout) {
-            remintValue += out.nValue;
-        }
-        if (tx.vin.size() != 1) {
-           error("A Zerocoin to Sigma remint tx shoud have just 1 input");
-           return;
-        }
-        handleRemint(tx.vin[0], tx.GetHash(), height, txNumber, remintValue, addressIndex, addressUnspentIndex, spentIndex);
     }
 
     if(tx.IsZerocoinSpend() || tx.IsSigmaSpend())
@@ -595,21 +545,9 @@ void CDbIndexHelper::DisconnectTransactionInputs(CTransaction const & tx, int he
     if(spentIndex)
         pSpentBegin = spentIndex->size();
 
-    if(tx.IsZerocoinRemint()) {
-        CAmount remintValue = 0;
-        for (CTxOut const & out : tx.vout) {
-            remintValue += out.nValue;
-        }
-        if (tx.vin.size() != 1) {
-           error("A Zerocoin to Sigma remint tx shoud have just 1 input");
-           return;
-        }
-        handleRemint(tx.vin[0], tx.GetHash(), height, txNumber, remintValue, addressIndex, addressUnspentIndex, spentIndex);
-    }
-
     size_t no = 0;
 
-    if(!tx.IsCoinBase() && !tx.IsZerocoinSpend() && !tx.IsSigmaSpend() && !tx.IsZerocoinRemint())
+    if(!tx.IsCoinBase() && !tx.IsZerocoinSpend() && !tx.IsSigmaSpend())
         for (CTxIn const & input : tx.vin) {
             handleInput(input, no++, tx.GetHash(), height, txNumber, view, addressIndex, addressUnspentIndex, spentIndex);
         }

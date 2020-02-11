@@ -5,8 +5,6 @@ all:
 	$(MAKE) /F Makefile.nmake
 	cd ../../src/or
 	$(MAKE) /F Makefile.nmake
-	cd ../../src/test
-	$(MAKE) /F Makefile.nmake
 
 clean:
 	cd src/common
@@ -14,6 +12,4 @@ clean:
 	cd ../../src/ext
 	$(MAKE) /F Makefile.nmake clean
 	cd ../../src/or
-	$(MAKE) /F Makefile.nmake clean
-	cd ../../src/test
 	$(MAKE) /F Makefile.nmake clean

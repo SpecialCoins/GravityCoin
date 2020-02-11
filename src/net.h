@@ -94,7 +94,7 @@ CNode* FindNode(const std::string& addrName);
 CNode* FindNode(const CService& ip);
 CNode* FindNode(const NodeId id); //TODO: Remove this
 
-CNode* ConnectNode(CAddress addrConnect, const char *pszDest = NULL, bool fCountFailure = false, bool fConnectToZnode = false);
+CNode* ConnectNode(CAddress addrConnect, const char *pszDest = NULL, bool fCountFailure = false, bool fConnectToXnode = false);
 
 bool OpenNetworkConnection(const CAddress& addrConnect, bool fCountFailure, CSemaphoreGrant *grantOutbound = NULL, const char *strDest = NULL, bool fOneShot = false, bool fFeeler = false);
 void MapPort(bool fUseUPnP);
@@ -103,6 +103,8 @@ bool BindListenPort(const CService &bindAddr, std::string& strError, bool fWhite
 void StartNode(boost::thread_group& threadGroup, CScheduler& scheduler);
 bool StopNode();
 void SocketSendData(CNode *pnode);
+/** See whether the protocol update is enforced for connected nodes */
+int ActiveProtocol();
 
 struct CombinerAll
 {
@@ -165,6 +167,7 @@ extern bool fListen;
 extern ServiceFlags nLocalServices;
 extern ServiceFlags nRelevantServices;
 extern bool fRelayTxes;
+extern bool fDandelion;
 extern uint64_t nLocalHostNonce;
 extern CAddrMan addrman;
 
@@ -378,8 +381,8 @@ public:
 
     bool fSupportsDandelion = false;
     NodeId id;
-    // znode from dash
-    bool fZnode;
+    // xnode from dash
+    bool fXnode;
 
     const uint64_t nKeyedNetGroup;
 protected:
@@ -785,6 +788,7 @@ public:
     }
 
     void CloseSocketDisconnect();
+    bool DisconnectOldProtocol(int nVersionRequired, std::string strLastCommand = "");
 
     // Denial-of-service detection/prevention
     // The idea is to detect peers that are behaving
@@ -868,7 +872,11 @@ public:
 
 };
 
-
+class CExplicitNetCleanup
+{
+public:
+    static void callCleanup();
+};
 
 class CTransaction;
 void RelayTransaction(const CTransaction& tx);

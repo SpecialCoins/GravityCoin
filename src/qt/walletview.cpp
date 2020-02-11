@@ -5,9 +5,7 @@
 #include "walletview.h"
 
 #include "addressbookpage.h"
-#include "zerocoinpage.h"
 #include "sigmadialog.h"
-#include "zc2sigmapage.h"
 #include "askpassphrasedialog.h"
 #include "bitcoingui.h"
 #include "clientmodel.h"
@@ -17,25 +15,22 @@
 #include "platformstyle.h"
 #include "receivecoinsdialog.h"
 #include "sendcoinsdialog.h"
+#include "sendmpdialog.h"
+#include "lookupspdialog.h"
+#include "lookuptxdialog.h"
+#include "lookupaddressdialog.h"
 #include "metadexcanceldialog.h"
 #include "metadexdialog.h"
 #include "signverifymessagedialog.h"
 #include "tradehistorydialog.h"
 #include "transactiontablemodel.h"
 #include "transactionview.h"
+#include "txhistorydialog.h"
 #include "walletmodel.h"
 
 #include "ui_interface.h"
 
-#ifdef ENABLE_EXODUS
-#include "lookupaddressdialog.h"
-#include "lookupspdialog.h"
-#include "lookuptxdialog.h"
-#include "sendmpdialog.h"
-#include "txhistorydialog.h"
-
-#include "../exodus/exodus.h"
-#endif
+#include <exodus/exodus.h>
 
 #include <QAction>
 #include <QActionGroup>
@@ -54,56 +49,39 @@ WalletView::WalletView(const PlatformStyle *platformStyle, QWidget *parent):
     clientModel(0),
     walletModel(0),
     overviewPage(0),
-#ifdef ENABLE_EXODUS
-    exodusTransactionsView(0),
-    transactionTabs(0),
     sendExodusView(0),
-    sendCoinsTabs(0),
-#endif
     sigmaView(0),
     blankSigmaView(0),
-    zc2SigmaPage(0),
-    zcoinTransactionsView(0),
-    platformStyle(platformStyle)
+    exodusTransactionsView(0),
+    gravitycoinTransactionsView(0),
+    platformStyle(platformStyle),
+    transactionTabs(0),
+    sendCoinsTabs(0)
 {
     overviewPage = new OverviewPage(platformStyle);
     transactionsPage = new QWidget(this);
-#ifdef ENABLE_EXODUS
     exoAssetsPage = new ExoAssetsDialog();
-#endif
     receiveCoinsPage = new ReceiveCoinsDialog(platformStyle);
     usedSendingAddressesPage = new AddressBookPage(platformStyle, AddressBookPage::ForEditing, AddressBookPage::SendingTab, this);
     usedReceivingAddressesPage = new AddressBookPage(platformStyle, AddressBookPage::ForEditing, AddressBookPage::ReceivingTab, this);
-    zerocoinPage = new ZerocoinPage(platformStyle, ZerocoinPage::ForEditing, this);
     sigmaPage = new QWidget(this);
-    zc2SigmaPage = new Zc2SigmaPage(platformStyle, this);
     sendCoinsPage = new QWidget(this);
-#ifdef ENABLE_EXODUS
     toolboxPage = new QWidget(this);
-#endif
-    znodeListPage = new ZnodeList(platformStyle);
+    xnodeListPage = new XnodeList(platformStyle);
 
     setupTransactionPage();
     setupSendCoinPage();
-#ifdef ENABLE_EXODUS
     setupToolboxPage();
-#endif
     setupSigmaPage();
 
     addWidget(overviewPage);
-#ifdef ENABLE_EXODUS
     addWidget(exoAssetsPage);
-#endif
     addWidget(transactionsPage);
     addWidget(receiveCoinsPage);
     addWidget(sendCoinsPage);
-    addWidget(zerocoinPage);
     addWidget(sigmaPage);
-    addWidget(zc2SigmaPage);
-#ifdef ENABLE_EXODUS
     addWidget(toolboxPage);
-#endif
-    addWidget(znodeListPage);
+    addWidget(xnodeListPage);
 
     // Clicking on a transaction on the overview pre-selects the transaction on the transaction history page
     connect(overviewPage, SIGNAL(transactionClicked(QModelIndex)), this, SLOT(focusBitcoinHistoryTab(QModelIndex)));
@@ -116,13 +94,13 @@ WalletView::~WalletView()
 
 void WalletView::setupTransactionPage()
 {
-    // Create Zcoin transactions list
-    zcoinTransactionList = new TransactionView(platformStyle);
+    // Create GravityCoin transactions list
+    coinTransactionList = new TransactionView(platformStyle);
 
-    connect(zcoinTransactionList, SIGNAL(doubleClicked(QModelIndex)), zcoinTransactionList, SLOT(showDetails()));
-    connect(zcoinTransactionList, SIGNAL(message(QString, QString, unsigned int)), this, SIGNAL(message(QString, QString, unsigned int)));
+    connect(coinTransactionList, SIGNAL(doubleClicked(QModelIndex)), coinTransactionList, SLOT(showDetails()));
+    connect(coinTransactionList, SIGNAL(message(QString, QString, unsigned int)), this, SIGNAL(message(QString, QString, unsigned int)));
 
-    // Create export panel for Zcoin transactions
+    // Create export panel for GravityCoin transactions
     auto exportButton = new QPushButton(tr("&Export"));
 
     exportButton->setToolTip(tr("Export the data in the current tab to a file"));
@@ -131,70 +109,64 @@ void WalletView::setupTransactionPage()
         exportButton->setIcon(platformStyle->SingleColorIcon(":/icons/export"));
     }
 
-    connect(exportButton, SIGNAL(clicked()), zcoinTransactionList, SLOT(exportClicked()));
+    connect(exportButton, SIGNAL(clicked()), coinTransactionList, SLOT(exportClicked()));
 
     auto exportLayout = new QHBoxLayout();
     exportLayout->addStretch();
     exportLayout->addWidget(exportButton);
 
     // Compose transaction list and export panel together
-    auto zcoinLayout = new QVBoxLayout();
-    zcoinLayout->addWidget(zcoinTransactionList);
-    zcoinLayout->addLayout(exportLayout);
+    auto coinLayout = new QVBoxLayout();
+    coinLayout->addWidget(coinTransactionList);
+    coinLayout->addLayout(exportLayout);
 
-    zcoinTransactionsView = new QWidget();
-    zcoinTransactionsView->setLayout(zcoinLayout);
+    gravitycoinTransactionsView = new QWidget();
+    gravitycoinTransactionsView->setLayout(coinLayout);
 
-#ifdef ENABLE_EXODUS
     // Create tabs for transaction categories
     if (isExodusEnabled()) {
         exodusTransactionsView = new TXHistoryDialog();
 
         transactionTabs = new QTabWidget();
-        transactionTabs->addTab(zcoinTransactionsView, tr("Zcoin"));
+        transactionTabs->addTab(gravitycoinTransactionsView, tr("GravityCoin"));
         transactionTabs->addTab(exodusTransactionsView, tr("Exodus"));
     }
-#endif
 
     // Set layout for transaction page
     auto pageLayout = new QVBoxLayout();
 
-#ifdef ENABLE_EXODUS
     if (transactionTabs) {
         pageLayout->addWidget(transactionTabs);
-    } else
-#endif
-        pageLayout->addWidget(zcoinTransactionsView);
+    } else {
+        pageLayout->addWidget(gravitycoinTransactionsView);
+    }
 
     transactionsPage->setLayout(pageLayout);
 }
 
 void WalletView::setupSendCoinPage()
 {
-    sendZcoinView = new SendCoinsDialog(platformStyle);
+    sendGravityCoinView = new SendCoinsDialog(platformStyle);
 
-    connect(sendZcoinView, SIGNAL(message(QString, QString, unsigned int)), this, SIGNAL(message(QString, QString, unsigned int)));
+    connect(sendGravityCoinView, SIGNAL(message(QString, QString, unsigned int)), this, SIGNAL(message(QString, QString, unsigned int)));
 
-#ifdef ENABLE_EXODUS
     // Create tab for coin type
     if (isExodusEnabled()) {
         sendExodusView = new SendMPDialog(platformStyle);
 
         sendCoinsTabs = new QTabWidget();
-        sendCoinsTabs->addTab(sendZcoinView, tr("Zcoin"));
+        sendCoinsTabs->addTab(sendGravityCoinView, tr("GravityCoin"));
         sendCoinsTabs->addTab(sendExodusView, tr("Exodus"));
     }
-#endif
 
     // Set layout for send coin page
     auto pageLayout = new QVBoxLayout();
 
-#ifdef ENABLE_EXODUS
     if (sendCoinsTabs) {
         pageLayout->addWidget(sendCoinsTabs);
-    } else
-#endif
-        pageLayout->addWidget(sendZcoinView);
+    } else {
+        pageLayout->addWidget(sendGravityCoinView);
+    }
 
     sendCoinsPage->setLayout(pageLayout);
 }
@@ -216,7 +188,6 @@ void WalletView::setupSigmaPage()
     }
 }
 
-#ifdef ENABLE_EXODUS
 void WalletView::setupToolboxPage()
 {
     // Create tools widget
@@ -236,7 +207,6 @@ void WalletView::setupToolboxPage()
     pageLayout->addWidget(tabs);
     toolboxPage->setLayout(pageLayout);
 }
-#endif
 
 void WalletView::setBitcoinGUI(BitcoinGUI *gui)
 {
@@ -262,17 +232,13 @@ void WalletView::setClientModel(ClientModel *clientModel)
     this->clientModel = clientModel;
 
     overviewPage->setClientModel(clientModel);
-    sendZcoinView->setClientModel(clientModel);
-    znodeListPage->setClientModel(clientModel);
-#ifdef ENABLE_EXODUS
+    sendGravityCoinView->setClientModel(clientModel);
+    xnodeListPage->setClientModel(clientModel);
     exoAssetsPage->setClientModel(clientModel);
-#endif
     if (pwalletMain->IsHDSeedAvailable()) {
         sigmaView->setClientModel(clientModel);
     }
-    zc2SigmaPage->setClientModel(clientModel);
 
-#ifdef ENABLE_EXODUS
     if (exodusTransactionsView) {
         exodusTransactionsView->setClientModel(clientModel);
     }
@@ -280,7 +246,6 @@ void WalletView::setClientModel(ClientModel *clientModel)
     if (sendExodusView) {
         sendExodusView->setClientModel(clientModel);
     }
-#endif
 }
 
 void WalletView::setWalletModel(WalletModel *walletModel)
@@ -288,20 +253,16 @@ void WalletView::setWalletModel(WalletModel *walletModel)
     this->walletModel = walletModel;
 
     // Put transaction list in tabs
-    zcoinTransactionList->setModel(walletModel);
+    coinTransactionList->setModel(walletModel);
     overviewPage->setWalletModel(walletModel);
     receiveCoinsPage->setModel(walletModel);
-    zerocoinPage->setModel(walletModel->getAddressTableModel());
     if (pwalletMain->IsHDSeedAvailable()) {
         sigmaView->setWalletModel(walletModel);
     }
-    zc2SigmaPage->createModel();
     usedReceivingAddressesPage->setModel(walletModel->getAddressTableModel());
     usedSendingAddressesPage->setModel(walletModel->getAddressTableModel());
-    znodeListPage->setWalletModel(walletModel);
-    sendZcoinView->setModel(walletModel);
-    zc2SigmaPage->setWalletModel(walletModel);
-#ifdef ENABLE_EXODUS
+    xnodeListPage->setWalletModel(walletModel);
+    sendGravityCoinView->setModel(walletModel);
     exoAssetsPage->setWalletModel(walletModel);
 
     if (exodusTransactionsView) {
@@ -311,7 +272,6 @@ void WalletView::setWalletModel(WalletModel *walletModel)
     if (sendExodusView) {
         sendExodusView->setWalletModel(walletModel);
     }
-#endif
 
     if (walletModel)
     {
@@ -359,19 +319,16 @@ void WalletView::gotoOverviewPage()
     setCurrentWidget(overviewPage);
 }
 
-#ifdef ENABLE_EXODUS
 void WalletView::gotoExoAssetsPage()
 {
     setCurrentWidget(exoAssetsPage);
 }
-#endif
 
 void WalletView::gotoHistoryPage()
 {
     setCurrentWidget(transactionsPage);
 }
 
-#ifdef ENABLE_EXODUS
 void WalletView::gotoExodusHistoryTab()
 {
     if (!transactionTabs) {
@@ -381,20 +338,16 @@ void WalletView::gotoExodusHistoryTab()
     setCurrentWidget(transactionsPage);
     transactionTabs->setCurrentIndex(1);
 }
-#endif
 
 void WalletView::gotoBitcoinHistoryTab()
 {
     setCurrentWidget(transactionsPage);
 
-#ifdef ENABLE_EXODUS
     if (transactionTabs) {
         transactionTabs->setCurrentIndex(0);
     }
-#endif
 }
 
-#ifdef ENABLE_EXODUS
 void WalletView::focusExodusTransaction(const uint256& txid)
 {
     if (!exodusTransactionsView) {
@@ -404,17 +357,16 @@ void WalletView::focusExodusTransaction(const uint256& txid)
     gotoExodusHistoryTab();
     exodusTransactionsView->focusTransaction(txid);
 }
-#endif
 
 void WalletView::focusBitcoinHistoryTab(const QModelIndex &idx)
 {
     gotoBitcoinHistoryTab();
-    zcoinTransactionList->focusTransaction(idx);
+    coinTransactionList->focusTransaction(idx);
 }
 
-void WalletView::gotoZnodePage()
+void WalletView::gotoXnodePage()
 {
-    setCurrentWidget(znodeListPage);
+    setCurrentWidget(xnodeListPage);
 }
 
 void WalletView::gotoReceiveCoinsPage()
@@ -422,38 +374,22 @@ void WalletView::gotoReceiveCoinsPage()
     setCurrentWidget(receiveCoinsPage);
 }
 
-void WalletView::gotoZerocoinPage()
-{
-    setCurrentWidget(zerocoinPage);
-}
-
 void WalletView::gotoSigmaPage()
 {
     setCurrentWidget(sigmaPage);
 }
 
-void WalletView::gotoZc2SigmaPage()
-{
-    if (pwalletMain->IsHDSeedAvailable()) {
-        setCurrentWidget(zc2SigmaPage);
-    } else {
-        setCurrentWidget(sigmaPage);
-    }
-}
-
-#ifdef ENABLE_EXODUS
 void WalletView::gotoToolboxPage()
 {
     setCurrentWidget(toolboxPage);
 }
-#endif
 
 void WalletView::gotoSendCoinsPage(QString addr)
 {
     setCurrentWidget(sendCoinsPage);
 
     if (!addr.isEmpty()){
-        sendZcoinView->setAddress(addr);
+        sendGravityCoinView->setAddress(addr);
     }
 }
 
@@ -483,13 +419,11 @@ void WalletView::gotoVerifyMessageTab(QString addr)
 
 bool WalletView::handlePaymentRequest(const SendCoinsRecipient& recipient)
 {
-#ifdef ENABLE_EXODUS
     if (sendCoinsTabs) {
         sendCoinsTabs->setCurrentIndex(0);
     }
-#endif
 
-    return sendZcoinView->handlePaymentRequest(recipient);
+    return sendGravityCoinView->handlePaymentRequest(recipient);
 }
 
 void WalletView::showOutOfSyncWarning(bool fShow)

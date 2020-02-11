@@ -1,6 +1,5 @@
 #include "main.h"
 #include "sigma.h"
-#include "zerocoin.h" // Mostly for reusing class libzerocoin::SpendMetaData
 #include "timedata.h"
 #include "chainparams.h"
 #include "util.h"
@@ -12,10 +11,9 @@
 #include "crypto/sha256.h"
 #include "sigma/coinspend.h"
 #include "sigma/coin.h"
-#include "sigma/remint.h"
-#include "znode-payments.h"
-#include "znode-sync.h"
-#include "primitives/zerocoin.h"
+#include "xnode-payments.h"
+#include "xnode-sync.h"
+#include "sigmaentry.h"
 
 #include <atomic>
 #include <sstream>
@@ -55,17 +53,11 @@ static bool CheckSigmaSpendSerial(
 bool IsSigmaAllowed()
 {
     LOCK(cs_main);
-    return IsSigmaAllowed(chainActive.Height());
-}
-
-bool IsSigmaAllowed(int height)
-{
-	return height >= ::Params().GetConsensus().nSigmaStartBlock;
-}
-
-bool IsRemintWindow(int height) {
-    const Consensus::Params& params = ::Params().GetConsensus();
-    return IsSigmaAllowed(height) && height < params.nSigmaStartBlock + params.nZerocoinToSigmaRemintWindowSize;
+    if (sporkManager.IsSporkActive(SPORK_9_SIGMA_NEW))
+    {
+        return false;
+    }
+    return true;
 }
 
 secp_primitives::GroupElement ParseSigmaMintScript(const CScript& script)
@@ -139,13 +131,12 @@ bool CheckSigmaBlock(CValidationState &state, const CBlock& block) {
     CAmount blockSpendsValue(0);
 
     for (const auto& tx : block.vtx) {
-        // Check zerocoin to sigma remints against the same limit as sigma spends
 
-        auto txSpendsValue = tx.IsZerocoinRemint() ? CoinRemintToV3::GetAmount(tx) : GetSpendAmount(tx);
+        auto txSpendsValue = GetSpendAmount(tx);
         size_t txSpendsAmount = 0;
 
         for (const auto& in : tx.vin) {
-            if (in.IsSigmaSpend() || in.IsZerocoinRemint()) {
+            if (in.IsSigmaSpend()) {
                 txSpendsAmount++;
             }
         }
@@ -185,20 +176,12 @@ bool CheckSigmaSpendTransaction(
         uint256 hashTx,
         bool isVerifyDB,
         int nHeight,
-        int nRealHeight,
         bool isCheckWallet,
-        bool fStatefulSigmaCheck,
         CSigmaTxInfo *sigmaTxInfo) {
+
     bool hasSigmaSpendInputs = false, hasNonSigmaInputs = false;
     int vinIndex = -1;
     std::unordered_set<Scalar, sigma::CScalarHash> txSerials;
-
-    Consensus::Params const & params = ::Params().GetConsensus();
-
-    if(!isVerifyDB && !isCheckWallet) {
-        if(nRealHeight >= params.nDisableUnpaddedSigmaBlock && nRealHeight < params.nSigmaPaddingBlock)
-             return state.DoS(100, error("Sigma is disabled at this period."));
-    }
 
     for (const CTxIn &txin : tx.vin)
     {
@@ -221,7 +204,7 @@ bool CheckSigmaSpendTransaction(
                 "CheckSigmaSpendTransaction: invalid spend transaction");
         }
 
-        if (spend->getVersion() != ZEROCOIN_TX_VERSION_3 && spend->getVersion() != ZEROCOIN_TX_VERSION_3_1) {
+        if (spend->getVersion() != ZEROCOIN_TX_VERSION_3) {
             return state.DoS(100,
                              false,
                              NSEQUENCE_INCORRECT,
@@ -242,10 +225,6 @@ bool CheckSigmaSpendTransaction(
         LogPrintf("CheckSigmaSpendTransaction: tx version=%d, tx metadata hash=%s, serial=%s\n",
                 spend->getVersion(), txHashForMetadata.ToString(),
                 spend->getCoinSerialNumber().tostring());
-
-        if (!fStatefulSigmaCheck) {
-            continue;
-        }
 
         CSigmaState::SigmaCoinGroupInfo coinGroup;
         if (!sigmaState.GetCoinGroupInfo(targetDenominations[vinIndex], coinGroupId, coinGroup))
@@ -283,15 +262,7 @@ bool CheckSigmaSpendTransaction(
             index = index->pprev;
         }
 
-        bool fPadding = spend->getVersion() >= ZEROCOIN_TX_VERSION_3_1;
-        if (!isVerifyDB) {
-            bool fShouldPad = (nHeight != INT_MAX && nHeight >= params.nSigmaPaddingBlock) ||
-                        (nHeight == INT_MAX && chainActive.Height() >= params.nSigmaPaddingBlock);
-            if (fPadding != fShouldPad)
-                return state.DoS(1, error("Incorrect sigma spend transaction version"));
-        }
-
-        passVerify = spend->Verify(anonymity_set, newMetaData, fPadding);
+        passVerify = spend->Verify(anonymity_set, newMetaData);
         if (passVerify) {
             Scalar serial = spend->getCoinSerialNumber();
             // do not check for duplicates in case we've seen exact copy of this tx in this block before
@@ -345,7 +316,6 @@ bool CheckSigmaMintTransaction(
         const CTxOut &txout,
         CValidationState &state,
         uint256 hashTx,
-        bool fStatefulSigmaCheck,
         CSigmaTxInfo *sigmaTxInfo) {
     secp_primitives::GroupElement pubCoinValue;
 
@@ -381,13 +351,13 @@ bool CheckSigmaMintTransaction(
         }
     }
 
-    if (hasCoin && fStatefulSigmaCheck) {
-       LogPrintf("CheckSigmaMintTransaction: double mint, tx=%s\n",
-                txout.GetHash().ToString());
-        return state.DoS(100,
-                false,
-                PUBCOIN_NOT_VALIDATE,
-                "CheckSigmaTransaction: double mint");
+    if (hasCoin && xnodeSync.IsBlockchainSynced()) {
+        LogPrintf("CheckSigmaMintTransaction: double mint, tx=%s\n",
+                 txout.GetHash().ToString());
+         return state.DoS(100,
+                 false,
+                 PUBCOIN_NOT_VALIDATE,
+                 "CheckSigmaTransaction: double mint");
     }
 
     if (!pubCoin.validate())
@@ -412,34 +382,36 @@ bool CheckSigmaTransaction(
         bool isVerifyDB,
         int nHeight,
         bool isCheckWallet,
-        bool fStatefulSigmaCheck,
         CSigmaTxInfo *sigmaTxInfo)
 {
-    Consensus::Params const & consensus = ::Params().GetConsensus();
+    auto& consensus = ::Params().GetConsensus();
 
     // nHeight have special mode which value is INT_MAX so we need this.
     int realHeight = nHeight;
-
     if (realHeight == INT_MAX) {
         LOCK(cs_main);
         realHeight = chainActive.Height();
     }
 
-    bool const allowSigma = (realHeight >= consensus.nSigmaStartBlock);
+    bool allowSigma = (realHeight >= consensus.nSigmaStartBlock);
 
-    if (!isVerifyDB && !isCheckWallet) {
-        if (allowSigma && sigmaState.IsSurgeConditionDetected()) {
-            return state.DoS(100, false,
-                REJECT_INVALID,
-                "Sigma surge protection is ON.");
-        }
+    if (allowSigma && sigmaState.IsSurgeConditionDetected()) {
+        return state.DoS(100, false,
+            REJECT_INVALID,
+            "Sigma surge protection is ON.");
+    }
+
+     if (xnodeSync.IsBlockchainSynced() && sporkManager.IsSporkActive(SPORK_9_SIGMA_NEW))
+    {
+            LogPrintf("CheckSigmaTransaction: SPORK_9_SIGMA_NEW\n");
+            return false;
     }
 
     // Check Mint Sigma Transaction
     if (allowSigma) {
         for (const CTxOut &txout : tx.vout) {
             if (!txout.scriptPubKey.empty() && txout.scriptPubKey.IsSigmaMint()) {
-                if (!CheckSigmaMintTransaction(txout, state, hashTx, fStatefulSigmaCheck, sigmaTxInfo))
+                if (!CheckSigmaMintTransaction(txout, state, hashTx, sigmaTxInfo))
                     return false;
             }
         }
@@ -491,8 +463,8 @@ bool CheckSigmaTransaction(
         // Only one loop, we checked on the format before entering this case
         if (!isVerifyDB) {
             if (!CheckSigmaSpendTransaction(
-                tx, denominations, state, hashTx, isVerifyDB, nHeight, realHeight,
-                isCheckWallet, fStatefulSigmaCheck, sigmaTxInfo)) {
+                tx, denominations, state, hashTx, isVerifyDB, nHeight,
+                isCheckWallet, sigmaTxInfo)) {
                     return false;
             }
         }
@@ -602,12 +574,12 @@ bool ConnectBlockSigma(
             pindexNew->sigmaSpentSerials.clear();
         }
 
-        if (!CheckSigmaBlock(state, *pblock)) {
+        if (!sigma::CheckSigmaBlock(state, *pblock)) {
             return false;
         }
 
         BOOST_FOREACH(auto& serial, pblock->sigmaTxInfo->spentSerials) {
-            if (!CheckSigmaSpendSerial(
+            if (!sigma::CheckSigmaSpendSerial(
                     state,
                     pblock->sigmaTxInfo.get(),
                     serial.first,
@@ -717,22 +689,26 @@ bool GetOutPoint(COutPoint& outPoint, const uint256 &pubCoinValueHash) {
 }
 
 bool BuildSigmaStateFromIndex(CChain *chain) {
+    sigmaState.Reset();
     for (CBlockIndex *blockIndex = chain->Genesis(); blockIndex; blockIndex=chain->Next(blockIndex))
     {
         sigmaState.AddBlock(blockIndex);
     }
     // DEBUG
     LogPrintf(
-        "Latest IDs for sigma coin groups are %d, %d, %d, %d, %d\n",
-        sigmaState.GetLatestCoinID(CoinDenomination::SIGMA_DENOM_0_1),
-        sigmaState.GetLatestCoinID(CoinDenomination::SIGMA_DENOM_0_5),
-        sigmaState.GetLatestCoinID(CoinDenomination::SIGMA_DENOM_1),
-        sigmaState.GetLatestCoinID(CoinDenomination::SIGMA_DENOM_10),
-        sigmaState.GetLatestCoinID(CoinDenomination::SIGMA_DENOM_100));
+        "Latest IDs for sigma coin groups are %d, %d, %d, %d, %d, %d, %d, %d\n",
+        sigmaState.GetLatestCoinID(CoinDenomination::SIGMA_DENOM_X1),
+        sigmaState.GetLatestCoinID(CoinDenomination::SIGMA_DENOM_X5),
+        sigmaState.GetLatestCoinID(CoinDenomination::SIGMA_DENOM_X10),
+        sigmaState.GetLatestCoinID(CoinDenomination::SIGMA_DENOM_X50),
+        sigmaState.GetLatestCoinID(CoinDenomination::SIGMA_DENOM_X100),
+        sigmaState.GetLatestCoinID(CoinDenomination::SIGMA_DENOM_X500),
+        sigmaState.GetLatestCoinID(CoinDenomination::SIGMA_DENOM_X1000),
+        sigmaState.GetLatestCoinID(CoinDenomination::SIGMA_DENOM_X5000));
     return true;
 }
 
-// CZerocoinTxInfoV3
+// CsigmaTxinfo
 
 void CSigmaTxInfo::Complete() {
     // We need to sort mints lexicographically by serialized value of pubCoin. That's the way old code

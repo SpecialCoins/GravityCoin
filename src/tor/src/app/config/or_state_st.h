@@ -15,7 +15,6 @@
 
 #include "lib/cc/torint.h"
 struct smartlist_t;
-struct config_suite_t;
 
 /** Persistent state for an onion router, as saved to disk. */
 struct or_state_t {
@@ -95,14 +94,6 @@ struct or_state_t {
   /** True if we were dormant when we last wrote the file; false if we
    * weren't.  "auto" on initial startup. */
   int Dormant;
-
-  /**
-   * State objects for individual modules.
-   *
-   * Never access this field or its members directly: instead, use the module
-   * in question to get its relevant state object if you must.
-   */
-  struct config_suite_t *substates_;
 };
 
-#endif /* !defined(TOR_OR_STATE_ST_H) */
+#endif

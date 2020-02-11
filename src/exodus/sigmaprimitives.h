@@ -113,10 +113,10 @@ public:
     explicit SigmaProof(const SigmaParams& params);
 
     template<typename PublicKey>
-    SigmaProof(const SigmaParams& params, const SigmaPrivateKey& key, PublicKey first, PublicKey last, bool fPadding) :
+    SigmaProof(const SigmaParams& params, const SigmaPrivateKey& key, PublicKey first, PublicKey last) :
         SigmaProof(params)
     {
-        Generate(key, first, last, fPadding);
+        Generate(key, first, last);
     }
 
 public:
@@ -125,7 +125,7 @@ public:
 
 public:
     template<typename PublicKey>
-    bool Verify(PublicKey first, PublicKey last, bool fPadding) const
+    bool Verify(PublicKey first, PublicKey last) const
     {
         // Create commitment set.
         auto gs = (params.g * serial).inverse();
@@ -145,12 +145,12 @@ public:
             params.m
         );
 
-        return verifier.verify(commits, proof, fPadding);
+        return verifier.verify(commits, proof);
     }
 
 public:
     template<typename PublicKey>
-    void Generate(const SigmaPrivateKey& priv, PublicKey first, PublicKey last, bool fPadding)
+    void Generate(const SigmaPrivateKey& priv, PublicKey first, PublicKey last)
     {
         if (!priv.IsValid()) {
             throw std::invalid_argument("Private key is not valid");
@@ -186,7 +186,7 @@ public:
             params.m
         );
 
-        prover.proof(commits, *index, priv.randomness, fPadding, proof);
+        prover.proof(commits, *index, priv.randomness, proof);
         serial = priv.serial;
     }
 

@@ -103,7 +103,3 @@ exodus/libbitcoin_server_a-version.$(OBJEXT): obj/build.h # build info
 CLEAN_EXODUS = exodus/*.gcda exodus/*.gcno
 
 CLEANFILES += $(CLEAN_EXODUS)
-
-if ENABLE_TESTS
-include Makefile.exodustest.include
-endif

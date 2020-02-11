@@ -34,6 +34,7 @@
 #include "core/crypto/onion_crypto.h"
 
 #include "core/or/or_circuit_st.h"
+#include "lib/intmath/weakrng.h"
 
 static void queue_pending_tasks(void);
 
@@ -73,6 +74,8 @@ worker_state_free_void(void *arg)
 static replyqueue_t *replyqueue = NULL;
 static threadpool_t *threadpool = NULL;
 
+static tor_weak_rng_t request_sample_rng = TOR_WEAK_RNG_INIT;
+
 static int total_pending_tasks = 0;
 static int max_pending_tasks = 128;
 
@@ -106,6 +109,7 @@ cpu_init(void)
 
   /* Total voodoo. Can we make this more sensible? */
   max_pending_tasks = get_num_cpus(get_options()) * 64;
+  crypto_seed_weak_rng(&request_sample_rng);
 }
 
 /** Magic numbers to make sure our cpuworker_requests don't grow any
@@ -231,10 +235,9 @@ should_time_request(uint16_t onionskin_type)
    * sample */
   if (onionskins_n_processed[onionskin_type] < 4096)
     return 1;
-
   /** Otherwise, measure with P=1/128.  We avoid doing this for every
    * handshake, since the measurement itself can take a little time. */
-  return crypto_fast_rng_one_in_n(get_thread_fast_rng(), 128);
+  return tor_weak_random_one_in_n(&request_sample_rng, 128);
 }
 
 /** Return an estimate of how many microseconds we will need for a single

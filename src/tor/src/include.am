@@ -5,12 +5,9 @@ include src/lib/err/include.am
 include src/lib/cc/include.am
 include src/lib/ctime/include.am
 include src/lib/compress/include.am
-include src/lib/conf/include.am
-include src/lib/confmgt/include.am
 include src/lib/container/include.am
 include src/lib/crypt_ops/include.am
 include src/lib/defs/include.am
-include src/lib/dispatch/include.am
 include src/lib/encoding/include.am
 include src/lib/evloop/include.am
 include src/lib/fdio/include.am
@@ -27,7 +24,6 @@ include src/lib/malloc/include.am
 include src/lib/net/include.am
 include src/lib/osinfo/include.am
 include src/lib/process/include.am
-include src/lib/pubsub/include.am
 include src/lib/sandbox/include.am
 include src/lib/string/include.am
 include src/lib/subsys/include.am
@@ -46,8 +42,6 @@ include src/core/include.am
 include src/app/include.am
 
 include src/rust/include.am
-include src/test/include.am
 include src/tools/include.am
 include src/win32/include.am
 include src/config/include.am
-include src/test/fuzz/include.am

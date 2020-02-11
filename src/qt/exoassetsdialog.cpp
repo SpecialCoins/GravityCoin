@@ -130,8 +130,8 @@ void ExoAssetsDialog::setClientModel(ClientModel *model)
 {
     this->clientModel = model;
     if (model != NULL) {
-        connect(model, SIGNAL(refreshOmniBalance()), this, SLOT(balancesUpdated()));
-        connect(model, SIGNAL(reinitOmniState()), this, SLOT(reinitOmni()));
+        connect(model, SIGNAL(refreshExodusBalance()), this, SLOT(balancesUpdated()));
+        connect(model, SIGNAL(reinitExodusState()), this, SLOT(reinitOmni()));
     }
 }
 

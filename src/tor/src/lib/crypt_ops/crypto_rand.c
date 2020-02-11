@@ -36,7 +36,6 @@
 
 #include "lib/defs/digest_sizes.h"
 #include "lib/crypt_ops/crypto_digest.h"
-#include "lib/ctime/di_ops.h"
 
 #ifdef ENABLE_NSS
 #include "lib/crypt_ops/crypto_nss_mgt.h"
@@ -47,7 +46,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 ENABLE_GCC_WARNING(redundant-decls)
-#endif /* defined(ENABLE_OPENSSL) */
+#endif
 
 #ifdef ENABLE_NSS
 #include <pk11pub.h>
@@ -248,7 +247,7 @@ crypto_strongest_rand_fallback(uint8_t *out, size_t out_len)
   (void)out;
   (void)out_len;
   return -1;
-#else /* !defined(_WIN32) */
+#else /* !(defined(_WIN32)) */
   static const char *filenames[] = {
     "/dev/srandom", "/dev/urandom", "/dev/random", NULL
   };
@@ -315,7 +314,7 @@ crypto_strongest_rand_raw(uint8_t *out, size_t out_len)
       }
     }
 
-    if ((out_len < sanity_min_size) || !safe_mem_is_zero((char*)out, out_len))
+    if ((out_len < sanity_min_size) || !tor_mem_is_zero((char*)out, out_len))
       return 0;
   }
 
@@ -419,7 +418,7 @@ crypto_seed_openssl_rng(void)
   else
     return -1;
 }
-#endif /* defined(ENABLE_OPENSSL) */
+#endif
 
 #ifdef ENABLE_NSS
 /**
@@ -442,7 +441,7 @@ crypto_seed_nss_rng(void)
 
   return load_entropy_ok ? 0 : -1;
 }
-#endif /* defined(ENABLE_NSS) */
+#endif
 
 /**
  * Seed the RNG for any and all crypto libraries that we're using with bytes
@@ -520,13 +519,13 @@ crypto_rand_unmocked(char *to, size_t n)
 
 #undef BUFLEN
   }
-#else /* !defined(ENABLE_NSS) */
+#else
   int r = RAND_bytes((unsigned char*)to, (int)n);
   /* We consider a PRNG failure non-survivable. Let's assert so that we get a
    * stack trace about where it happened.
    */
   tor_assert(r >= 0);
-#endif /* defined(ENABLE_NSS) */
+#endif
 }
 
 /**
@@ -627,6 +626,6 @@ crypto_force_rand_ssleay(void)
     RAND_set_rand_method(default_method);
     return 1;
   }
-#endif /* defined(ENABLE_OPENSSL) */
+#endif
   return 0;
 }

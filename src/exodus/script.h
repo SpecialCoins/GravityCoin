@@ -1,5 +1,5 @@
-#ifndef ZCOIN_EXODUS_SCRIPT_H
-#define ZCOIN_EXODUS_SCRIPT_H
+#ifndef GRAVITYCOIN_EXODUS_SCRIPT_H
+#define GRAVITYCOIN_EXODUS_SCRIPT_H
 
 #include "../script/script.h"
 #include "../script/standard.h"
@@ -45,4 +45,4 @@ Output GetPushedValues(const CScript& script, Output output)
 
 } // namespace exodus
 
-#endif // ZCOIN_EXODUS_SCRIPT_H
+#endif // GRAVITYCOIN_EXODUS_SCRIPT_H

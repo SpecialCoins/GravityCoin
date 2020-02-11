@@ -1,5 +1,5 @@
-#ifndef ZCOIN_SIGMA_R1_PROOF_VERIFIER_H
-#define ZCOIN_SIGMA_R1_PROOF_VERIFIER_H
+#ifndef GRAVITYCOIN_SIGMA_R1_PROOF_VERIFIER_H
+#define GRAVITYCOIN_SIGMA_R1_PROOF_VERIFIER_H
 
 namespace sigma {
 
@@ -35,4 +35,4 @@ private:
 
 #include "r1_proof_verifier.hpp"
 
-#endif // ZCOIN_SIGMA_R1_PROOF_VERIFIER_H
+#endif // GRAVITYCOIN_SIGMA_R1_PROOF_VERIFIER_H

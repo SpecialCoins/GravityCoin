@@ -525,7 +525,7 @@ consdiffmgr_add_consensus_nulterm(const char *consensus,
   tor_free(ctmp);
   return r;
 }
-#endif /* defined(TOR_UNIT_TESTS) */
+#endif
 
 /**
  * Given a buffer containing a networkstatus consensus, and the results of

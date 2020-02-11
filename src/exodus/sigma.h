@@ -13,8 +13,7 @@ bool VerifySigmaSpend(
     SigmaDenomination denomination,
     SigmaMintGroup group,
     size_t groupSize,
-    const SigmaProof& proof,
-    bool fPadding);
+    const SigmaProof& proof);
 
 } // namespace exodus
 

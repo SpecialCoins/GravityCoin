@@ -1,5 +1,5 @@
-#ifndef ZCOIN_SIGMA_SIGMAPLUS_PROVER_H
-#define ZCOIN_SIGMA_SIGMAPLUS_PROVER_H
+#ifndef GRAVITYCOIN_SIGMA_SIGMAPLUS_PROVER_H
+#define GRAVITYCOIN_SIGMA_SIGMAPLUS_PROVER_H
 
 #include "r1_proof_generator.h"
 #include "sigmaplus_proof.h"
@@ -17,7 +17,6 @@ public:
     void proof(const std::vector<GroupElement>& commits,
                std::size_t l,
                const Exponent& r,
-               bool fPadding,
                SigmaPlusProof<Exponent, GroupElement>& proof_out);
 
 private:
@@ -31,4 +30,4 @@ private:
 
 #include "sigmaplus_prover.hpp"
 
-#endif // ZCOIN_SIGMA_SIGMAPLUS_PROVER_H
+#endif // GRAVITYCOIN_SIGMA_SIGMAPLUS_PROVER_H

@@ -1,9 +1,9 @@
-// Copyright (c) 2019 The Zcoin Core Developers
+// Copyright (c) 2019 The GravityCoin Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <hdmint/hdmint.h>
-#include <primitives/zerocoin.h>
+#include <sigmaentry.h>
 #include "hdmint/tracker.h"
 #include "util.h"
 #include "sync.h"
@@ -19,14 +19,6 @@
 using namespace std;
 using namespace sigma;
 
-/**
- * CHDMintTracker constructor.
- * 
- * Sets the wallet file string and clears the in-memory map of serial hashes -> CMintMeta objects
- * and the map of serial hashes -> pending spend txids.
- *
- * @param strWalletFile wallet file string
- */
 CHDMintTracker::CHDMintTracker(std::string strWalletFile)
 {
     this->strWalletFile = strWalletFile;
@@ -35,42 +27,21 @@ CHDMintTracker::CHDMintTracker(std::string strWalletFile)
     fInitialized = false;
 }
 
-/**
- * Destroy the CHDMintTracker object.
- * 
- * clears the in-memory map of serial hashes -> CMintMeta objects and the map of
- * serial hashes -> pending spend txids.
- *
- */
 CHDMintTracker::~CHDMintTracker()
 {
     mapSerialHashes.clear();
     mapPendingSpends.clear();
 }
 
-/**
- * Initialize the CHDMintTracker object.
- * 
- * Calls ListMints, which loads all CSigmaEntries and CHDMints from the database.
- *
- * @return void
- */
 void CHDMintTracker::Init()
 {
+    //Load all CSigmaEntries and CHDMints from the database
     if (!fInitialized) {
         ListMints(false, false, false, true);
         fInitialized = true;
     }
 }
 
-/**
- * Archive a mint.
- * 
- * Ensures the mint exists in the database and then adds it to the archive.
- *
- * @param meta mint meta object
- * @return success
- */
 bool CHDMintTracker::Archive(CMintMeta& meta)
 {
     uint256 hashPubcoin = meta.GetPubCoinValueHash();
@@ -89,12 +60,6 @@ bool CHDMintTracker::Archive(CMintMeta& meta)
     return true;
 }
 
-/**
- * Unarchives a mint.
- *
- * @param hashPubcoin reference to mint pubcoin hash
- * @return success
- */
 bool CHDMintTracker::UnArchive(const uint256& hashPubcoin, bool isDeterministic)
 {
     CWalletDB walletdb(strWalletFile);
@@ -110,17 +75,10 @@ bool CHDMintTracker::UnArchive(const uint256& hashPubcoin, bool isDeterministic)
         Add(sigma, false);
     }
 
-    LogPrintf("%s: unarchived %s\n", __func__, hashPubcoin.GetHex());   
+    LogPrintf("%s: unarchived %s\n", __func__, hashPubcoin.GetHex());
     return true;
 }
 
-/**
- * Get a CMintMeta object from memory using mint serial hash
- *
- * @param hashSerial mint serial hash used to retrieve object
- * @param mMeta reference to CMintMeta object
- * @return success
- */
 bool CHDMintTracker::GetMetaFromSerial(const uint256 &hashSerial, CMintMeta& mMeta)
 {
     auto it = mapSerialHashes.find(hashSerial);
@@ -131,13 +89,6 @@ bool CHDMintTracker::GetMetaFromSerial(const uint256 &hashSerial, CMintMeta& mMe
     return true;
 }
 
-/**
- * Get a CMintMeta object from memory using mint pubcoin hash
- *
- * @param hashPubcoin mint pubcoin hash used to retrieve object
- * @param mMeta reference to CMintMeta object
- * @return success
- */
 bool CHDMintTracker::GetMetaFromPubcoin(const uint256& hashPubcoin, CMintMeta& mMeta)
 {
     for (auto it : mapSerialHashes) {
@@ -150,11 +101,6 @@ bool CHDMintTracker::GetMetaFromPubcoin(const uint256& hashPubcoin, CMintMeta& m
     return false;
 }
 
-/**
- * Get the list of non-archiveed, in-memory mint serial hashes.
- * 
- * @return vHashes vector of serial hashes
- */
 std::vector<uint256> CHDMintTracker::GetSerialHashes()
 {
     vector<uint256> vHashes;
@@ -169,12 +115,6 @@ std::vector<uint256> CHDMintTracker::GetSerialHashes()
     return vHashes;
 }
 
-/**
- * Does this mint pubcoin hash exist in a CMintMeta object in memory
- * 
- * @param hashPubcoin mint pubcoin hash
- * @return success
- */
 bool CHDMintTracker::HasPubcoinHash(const uint256& hashPubcoin) const
 {
     for (auto const & it : mapSerialHashes) {
@@ -185,27 +125,12 @@ bool CHDMintTracker::HasPubcoinHash(const uint256& hashPubcoin) const
     return false;
 }
 
-/**
- * Does this mint serial hash map to a CMintMeta object in memory
- * 
- * @param hashSerial mint serial hash
- * @return success
- */
 bool CHDMintTracker::HasSerialHash(const uint256& hashSerial) const
 {
     auto it = mapSerialHashes.find(hashSerial);
     return it != mapSerialHashes.end();
 }
 
-/**
- * Update the tracker state
- * 
- * From the CMintMeta object passed, update the state (both memory and database) accordingly.
- * If a CHDMint object does not exist for this mint, fail.
- * 
- * @param meta the CMintMeta object used to update
- * @return success
- */
 bool CHDMintTracker::UpdateState(const CMintMeta& meta)
 {
     uint256 hashPubcoin = meta.GetPubCoinValueHash();
@@ -271,18 +196,6 @@ bool CHDMintTracker::UpdateState(const CMintMeta& meta)
     return true;
 }
 
-/**
- * Add a mint object to memory.
- * 
- * If this is a new mint, also write the CHDMint object to database. 
- * Also notifies Qt that a Sigma mint has been added so as to update the balance display correctly.
- * This is used to populate memory on startup.
- * 
- * @param dMint CHDMint object to add
- * @param isNew set to true if this mint has just been created, also adds mint to database
- * @param isArchived set to true if this mint is archived, used to set meta object correctly
- * @return success
- */
 void CHDMintTracker::Add(const CHDMint& dMint, bool isNew, bool isArchived)
 {
     CMintMeta meta;
@@ -327,13 +240,6 @@ void CHDMintTracker::Add(const CSigmaEntry& sigma, bool isNew, bool isArchived)
         CWalletDB(strWalletFile).WriteSigmaEntry(sigma);
 }
 
-/**
- * Sets a mint as used via it's pubcoin hash.
- *
- * @param hashPubcoin mint pubcoin hash. Used to retrieve meta object
- * @param txid transaction ID of mint
- * @return void
- */
 void CHDMintTracker::SetPubcoinUsed(const uint256& hashPubcoin, const uint256& txid)
 {
     CMintMeta meta;
@@ -344,13 +250,6 @@ void CHDMintTracker::SetPubcoinUsed(const uint256& hashPubcoin, const uint256& t
     UpdateState(meta);
 }
 
-
-/**
- * Sets a mint as not used via it's pubcoin hash.
- *
- * @param hashPubcoin mint pubcoin hash. Used to retrieve meta object
- * @return void
- */
 void CHDMintTracker::SetPubcoinNotUsed(const uint256& hashPubcoin)
 {
     CMintMeta meta;
@@ -364,15 +263,10 @@ void CHDMintTracker::SetPubcoinNotUsed(const uint256& hashPubcoin)
     UpdateState(meta);
 }
 
-
-/**
- * Check mempool for the spend associated with the mint serial hash passed
- * 
- * @param setMempool the set of txid hashes in the mempool
- * @param hashSerial the mint serial hash to check for
- * @return success
- */
 bool CHDMintTracker::IsMempoolSpendOurs(const std::set<uint256>& setMempool, const uint256& hashSerial){
+    // get transaction back from mempool
+    // if spend, get hash of serial
+    // if matches mint.hashSerial, mark pending spend.
     for(auto& mempoolTxid : setMempool){
         auto it = mempool.mapTx.find(mempoolTxid);
         if (it == mempool.mapTx.end()){
@@ -405,14 +299,6 @@ bool CHDMintTracker::IsMempoolSpendOurs(const std::set<uint256>& setMempool, con
     return false;
 }
 
-/**
- * Update the in-memory CMintMeta object for the current mempool
- * 
- * @param setMempool the set of txid hashes in the mempool
- * @param mint the CMintMeta object to check for
- * @param fSpend if this mint object is being updated as a result of a spend transaction
- * @return success
- */
 bool CHDMintTracker::UpdateMetaStatus(const std::set<uint256>& setMempool, CMintMeta& mint, bool fSpend)
 {
     uint256 hashPubcoin = mint.GetPubCoinValueHash();
@@ -509,13 +395,6 @@ bool CHDMintTracker::UpdateMetaStatus(const std::set<uint256>& setMempool, CMint
     return false;
 }
 
-/**
- * Update mints found on-chain.
- * 
- * @param mintPoolEntries the set of mint pool entries to update 
- * @param updatedMeta the CMintMeta objects to update
- * @return void
- */
 void CHDMintTracker::UpdateFromBlock(const std::list<std::pair<uint256, MintPoolEntry>>& mintPoolEntries, const std::vector<CMintMeta>& updatedMeta){
     if (mintPoolEntries.size() > 0) {
         zwalletMain->SyncWithChain(false, mintPoolEntries);
@@ -526,14 +405,6 @@ void CHDMintTracker::UpdateFromBlock(const std::list<std::pair<uint256, MintPool
         UpdateState(meta);
 }
 
-/**
- * Update the state if mint transactions found on-chain exist in the wallet.
- * 
- * We attempt to read a mintpool object from the on-chain data found. If so, update state.
- * 
- * @param mints the set of public coin objects to check for.
- * @return void
- */
 void CHDMintTracker::UpdateMintStateFromBlock(const std::vector<sigma::PublicCoin>& mints){
     CWalletDB walletdb(strWalletFile);
     std::vector<CMintMeta> updatedMeta;
@@ -562,14 +433,6 @@ void CHDMintTracker::UpdateMintStateFromBlock(const std::vector<sigma::PublicCoi
     UpdateFromBlock(mintPoolEntries, updatedMeta);
 }
 
-/**
- * Update the state if spend transactions found on-chain exist in the wallet.
- * 
- * We attempt to read a mintpool object from the on-chain data found. If so, update state.
- * 
- * @param spentSerials the set of spent serial objects to check for.
- * @return void
- */
 void CHDMintTracker::UpdateSpendStateFromBlock(const sigma::spend_info_container& spentSerials){
     CWalletDB walletdb(strWalletFile);
     std::vector<CMintMeta> updatedMeta;
@@ -603,14 +466,6 @@ void CHDMintTracker::UpdateSpendStateFromBlock(const sigma::spend_info_container
     UpdateFromBlock(mintPoolEntries, updatedMeta);
 }
 
-/**
- * Update the state if mint transactions found in the mempool exist in the wallet.
- * 
- * We attempt to read a mintpool object from the mempool data found. If so, update state.
- * 
- * @param pubCoins the set of public coin objects to check for.
- * @return void
- */
 void CHDMintTracker::UpdateMintStateFromMempool(const std::vector<GroupElement>& pubCoins){
     CWalletDB walletdb(strWalletFile);
     std::vector<CMintMeta> updatedMeta;
@@ -642,14 +497,6 @@ void CHDMintTracker::UpdateMintStateFromMempool(const std::vector<GroupElement>&
     UpdateFromBlock(mintPoolEntries, updatedMeta);
 }
 
-/**
- * Update the state if spend transactions found in the mempool exist in the wallet.
- * 
- * We attempt to read a mintpool object from the mempool data found. If so, update state.
- * 
- * @param spentSerials the set of spent serial objects to check for.
- * @return void
- */
 void CHDMintTracker::UpdateSpendStateFromMempool(const vector<Scalar>& spentSerials){
     CWalletDB walletdb(strWalletFile);
     std::vector<CMintMeta> updatedMeta;
@@ -683,13 +530,6 @@ void CHDMintTracker::UpdateSpendStateFromMempool(const vector<Scalar>& spentSeri
     UpdateFromBlock(mintPoolEntries, updatedMeta);
 }
 
-/**
- * Returns the in memory mint objects as CSigmaEntry objects (ie. mints containing private data)
- * 
- * @param fUnusedOnly convert unused mints only
- * @param fMatureOnly convert mature (ie. spendable due to sufficient confirmations) mints only
- * @return list of CSigmaEntry objects
- */
 list<CSigmaEntry> CHDMintTracker::MintsAsSigmaEntries(bool fUnusedOnly, bool fMatureOnly){
     list <CSigmaEntry> listPubcoin;
     CWalletDB walletdb(strWalletFile);
@@ -703,16 +543,6 @@ list<CSigmaEntry> CHDMintTracker::MintsAsSigmaEntries(bool fUnusedOnly, bool fMa
     return listPubcoin;
 }
 
-/**
- * Sets up the in memory mint objects.
- * 
- * @param fUnusedOnly process unused mints only
- * @param fUnusedOnly process mature (ie. spendable due to sufficient confirmations) mints only
- * @param fUpdateStatus If the mints should be updated
- * @param fLoad If the mints should be loaded from database
- * @param fWrongSeed If mints without correct seed should be added
- * @return vector of CMintMeta objects
- */
 std::vector<CMintMeta> CHDMintTracker::ListMints(bool fUnusedOnly, bool fMatureOnly, bool fUpdateStatus, bool fLoad, bool fWrongSeed)
 {
     std::vector<CMintMeta> setMints;
@@ -775,11 +605,6 @@ std::vector<CMintMeta> CHDMintTracker::ListMints(bool fUnusedOnly, bool fMatureO
     return setMints;
 }
 
-/**
- * Get txids of all mempool entries.
- * 
- * @return set of mempool txids
- */
 std::set<uint256> CHDMintTracker::GetMempoolTxids(){
     std::set<uint256> setMempool;
     setMempool.clear();
@@ -791,11 +616,6 @@ std::set<uint256> CHDMintTracker::GetMempoolTxids(){
     return setMempool;
 }
 
-/**
- * map of serial hashes -> CMintMeta objects
- * 
- * @return void
- */
 void CHDMintTracker::Clear()
 {
     mapSerialHashes.clear();

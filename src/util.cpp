@@ -98,13 +98,13 @@ namespace boost {
 
 using namespace std;
 
-// znode fZnode
-bool fZNode = false;
+// xnode fXnode
+bool fXNode = false;
 bool fLiteMode = false;
 int nWalletBackups = 10;
 
-const char * const BITCOIN_CONF_FILENAME = "zcoin.conf";
-const char * const BITCOIN_PID_FILENAME = "zcoind.pid";
+const char * const BITCOIN_CONF_FILENAME = "GravityCoin.conf";
+const char * const BITCOIN_PID_FILENAME = "GravityCoind.pid";
 
 map<string, string> mapArgs;
 map<string, vector<string> > mapMultiArgs;
@@ -455,7 +455,7 @@ static std::string FormatException(const std::exception* pex, const char* pszThr
     char pszModule[MAX_PATH] = "";
     GetModuleFileNameA(NULL, pszModule, sizeof(pszModule));
 #else
-    const char* pszModule = "zcoin";
+    const char* pszModule = "GravityCoin";
 #endif
     if (pex)
         return strprintf(
@@ -475,13 +475,13 @@ void PrintExceptionContinue(const std::exception* pex, const char* pszThread)
 boost::filesystem::path GetDefaultDataDir()
 {
     namespace fs = boost::filesystem;
-    // Windows < Vista: C:\Documents and Settings\Username\Application Data\zcoin
-    // Windows >= Vista: C:\Users\Username\AppData\Roaming\zcoin
-    // Mac: ~/Library/Application Support/zcoin
-    // Unix: ~/.zcoin
+    // Windows < Vista: C:\Documents and Settings\Username\Application Data\GravityCoin
+    // Windows >= Vista: C:\Users\Username\AppData\Roaming\GravityCoin
+    // Mac: ~/Library/Application Support/GravityCoin
+    // Unix: ~/.GravityCoin
 #ifdef WIN32
     // Windows
-    return GetSpecialFolderPath(CSIDL_APPDATA) / "zcoin";
+    return GetSpecialFolderPath(CSIDL_APPDATA) / "GravityCoin";
 #else
     fs::path pathRet;
     char* pszHome = getenv("HOME");
@@ -491,10 +491,10 @@ boost::filesystem::path GetDefaultDataDir()
         pathRet = fs::path(pszHome);
 #ifdef MAC_OSX
     // Mac
-    return pathRet / "Library/Application Support/zcoin";
+    return pathRet / "Library/Application Support/GravityCoin";
 #else
     // Unix
-    return pathRet / ".zcoin";
+    return pathRet / ".GravityCoin";
 #endif
 #endif
 }
@@ -576,9 +576,9 @@ boost::filesystem::path GetConfigFile()
     return pathConfigFile;
 }
 
-boost::filesystem::path GetZnodeConfigFile()
+boost::filesystem::path GetXnodeConfigFile()
 {
-    boost::filesystem::path pathConfigFile(GetArg("-znconf", "znode.conf"));
+    boost::filesystem::path pathConfigFile(GetArg("-xnconf", "xnode.conf"));
     if (!pathConfigFile.is_complete()) pathConfigFile = GetDataDir() / pathConfigFile;
     LogPrintf("pathConfigFile=%s\n", pathConfigFile);
     return pathConfigFile;
@@ -589,14 +589,37 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
 {
     boost::filesystem::ifstream streamConfig(GetConfigFile());
     if (!streamConfig.good())
-        return; // No zcoin.conf file is OK
+     {
+            FILE* configFile = fopen(GetConfigFile().string().c_str(), "a");
+            if (configFile != NULL)
+            {
+                std::string strHeader =
+                        "#listen=1\n"
+                        "#server=1\n"
+                        "#rpcpassword=\n"
+                        "#rpcusername=\n"
+                        "#maxconnections=16\n"
+                        "#connect=\n"
+                        "#addnode=\n"
+                        "#rescan=0\n"
+                        "#reindex=0\n"
+                        "#reindex-chainstate=0\n"
+                        "#xnode=1\n"
+                        "#xnodeprivkey=123123123123123123123123 ## Replace with your xnode private key\n"
+                        "#externalip=123.123.123.123:29100 ## Replace with your node external IP\n";
+
+                fwrite(strHeader.c_str(), std::strlen(strHeader.c_str()), 1, configFile);
+                fclose(configFile);
+            }
+            return;
+        }
 
     set<string> setOptions;
     setOptions.insert("*");
 
     for (boost::program_options::detail::config_file_iterator it(streamConfig, setOptions), end; it != end; ++it)
     {
-        // Don't overwrite existing settings so command line settings override zcoin.conf
+        // Don't overwrite existing settings so command line settings override bitcoin.conf
         string strKey = string("-") + it->string_key;
         string strValue = it->value[0];
         InterpretNegativeSetting(strKey, strValue);

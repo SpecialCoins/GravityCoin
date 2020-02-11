@@ -295,4 +295,4 @@ struct origin_circuit_t {
 
 };
 
-#endif /* !defined(ORIGIN_CIRCUIT_ST_H) */
+#endif

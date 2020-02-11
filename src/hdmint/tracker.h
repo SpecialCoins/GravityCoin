@@ -1,11 +1,11 @@
-// Copyright (c) 2019 The Zcoin Core Developers
+// Copyright (c) 2019 The GravityCoin Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef ZCOIN_HDMINTTRACKER_H
-#define ZCOIN_HDMINTTRACKER_H
+#ifndef GRAVITYCOIN_HDMINTTRACKER_H
+#define GRAVITYCOIN_HDMINTTRACKER_H
 
-#include "primitives/zerocoin.h"
+#include "sigmaentry.h"
 #include "hdmint/mintpool.h"
 #include <list>
 
@@ -35,6 +35,7 @@ public:
     bool GetMetaFromSerial(const uint256& hashSerial, CMintMeta& mMeta);
     bool GetMetaFromPubcoin(const uint256& hashPubcoin, CMintMeta& mMeta);
     std::vector<uint256> GetSerialHashes();
+    std::list<CMintMeta> GetMints(bool fConfirmedOnly, bool fInactive = true) const;
     void UpdateFromBlock(const std::list<std::pair<uint256, MintPoolEntry>>& mintPoolEntries, const std::vector<CMintMeta>& updatedMeta);
     void UpdateMintStateFromBlock(const std::vector<sigma::PublicCoin>& mints);
     void UpdateSpendStateFromBlock(const sigma::spend_info_container& spentSerials);
@@ -49,4 +50,4 @@ public:
     void Clear();
 };
 
-#endif //ZCOIN_HDMINTTRACKER_H
+#endif //GRAVITYCOIN_HDMINTTRACKER_H

@@ -91,8 +91,8 @@ void SendMPDialog::setClientModel(ClientModel *model)
 {
     this->clientModel = model;
     if (model != NULL) {
-        connect(model, SIGNAL(refreshOmniBalance()), this, SLOT(balancesUpdated()));
-        connect(model, SIGNAL(reinitOmniState()), this, SLOT(balancesUpdated()));
+        connect(model, SIGNAL(refreshExodusBalance()), this, SLOT(balancesUpdated()));
+        connect(model, SIGNAL(reinitExodusState()), this, SLOT(balancesUpdated()));
     }
 }
 
@@ -171,7 +171,7 @@ void SendMPDialog::updateFrom()
         if (CheckFee(currentSetFromAddress, 16)) {
             ui->feeWarningLabel->setVisible(false);
         } else {
-            ui->feeWarningLabel->setText("WARNING: The sending address is low on XZC for transaction fees. Please topup the XZC balance for the sending address to send Exodus transactions.");
+            ui->feeWarningLabel->setText("WARNING: The sending address is low on GXX for transaction fees. Please topup the GXX balance for the sending address to send Exodus transactions.");
             ui->feeWarningLabel->setVisible(true);
         }
     }

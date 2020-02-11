@@ -486,7 +486,7 @@ void SigmaCoinControlDialog::updateLabels(WalletModel *model, QDialog* dialog)
     std::vector<COutPoint> vCoinControl;
     std::vector<COutput>   vOutputs;
     coinControl->ListSelected(vCoinControl);
-    model->getOutputs(vCoinControl, vOutputs, fMintTabSelected);
+    model->getOutputs(vCoinControl, vOutputs);
 
     BOOST_FOREACH(const COutput& out, vOutputs) {
         // unselect already spent, very unlikely scenario, this could happen
@@ -768,7 +768,7 @@ void SigmaCoinControlDialog::updateView()
             {
                 sAddress = QString::fromStdString(CBitcoinAddress(outputAddress).ToString());
 
-                // if listMode or change => show Zcoin address. In tree mode, address is not shown again for direct wallet address outputs
+                // if listMode or change => show GravityCoin address. In tree mode, address is not shown again for direct wallet address outputs
                 if (!treeMode || (!(sAddress == sWalletAddress)))
                     itemOutput->setText(COLUMN_ADDRESS, sAddress);
 

@@ -22,11 +22,11 @@
 #include <windows.h>
 #define socket_errno() (WSAGetLastError())
 #define SOCKET_EPROTONOSUPPORT WSAEPROTONOSUPPORT
-#else /* !defined(_WIN32) */
+#else
 #define closesocket(x) close(x)
 #define socket_errno() (errno)
 #define SOCKET_EPROTONOSUPPORT EPROTONOSUPPORT
-#endif /* defined(_WIN32) */
+#endif
 
 #ifdef NEED_ERSATZ_SOCKETPAIR
 

@@ -25,5 +25,5 @@ struct document_signature_t {
                                      * as good. */
 };
 
-#endif /* !defined(DOCUMENT_SIGNATURE_ST_H) */
+#endif
 

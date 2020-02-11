@@ -15,7 +15,7 @@
 
 static const int SERIALIZE_TRANSACTION_NO_WITNESS = 0x40000000;
 
-static const int WITNESS_SCALE_FACTOR = 4;
+static const int WITNESS_SCALE_FACTOR = 1;
 
 class CBadTxIn : public std::exception
 {
@@ -144,7 +144,6 @@ public:
     std::string ToString() const;
     bool IsZerocoinSpend() const;
     bool IsSigmaSpend() const;
-    bool IsZerocoinRemint() const;
 };
 
 /** An output of a transaction.  It contains the public key that the next input
@@ -228,7 +227,7 @@ public:
     bool IsDust(const CFeeRate &minRelayTxFee) const
     {
 //        return (nValue < GetDustThreshold(minRelayTxFee));
-        //zcoin: disable dust
+        //GravityCoin: disable dust
         return false;
     }
 
@@ -479,9 +478,6 @@ public:
 
     bool IsSigmaSpend() const;
     bool IsSigmaMint() const;
-
-    bool IsZerocoinRemint() const;
-
 
     friend bool operator==(const CTransaction& a, const CTransaction& b)
     {

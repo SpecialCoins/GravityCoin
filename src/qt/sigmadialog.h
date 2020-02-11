@@ -1,5 +1,5 @@
-#ifndef ZCOIN_QT_SIGMAPAGE_H
-#define ZCOIN_QT_SIGMAPAGE_H
+#ifndef GRAVITYCOIN_QT_SIGMAPAGE_H
+#define GRAVITYCOIN_QT_SIGMAPAGE_H
 
 #include "addresstablemodel.h"
 #include "clientmodel.h"
@@ -45,7 +45,6 @@ public:
 public Q_SLOTS:
     void clear();
     void accept();
-    void reject();
     SendCoinsEntry* addEntry();
     void coinControlFeatureChanged(bool);
     void updateTabsAndLabels();
@@ -78,7 +77,6 @@ private Q_SLOTS:
     void on_sendButton_clicked();
     void removeEntry(SendCoinsEntry* entry);
     void updateAvailableToMintBalance(const CAmount& balance);
-    void updateMintableBalance();
     void updateCoins(const std::vector<CMintMeta>& spendable, const std::vector<CMintMeta>& pending);
 
 Q_SIGNALS:
@@ -86,4 +84,4 @@ Q_SIGNALS:
     void message(const QString &title, const QString &message, unsigned int style);
 };
 
-#endif // ZCOIN_QT_SIGMAPAGE_H
+#endif // GRAVITYCOIN_QT_SIGMAPAGE_H

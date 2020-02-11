@@ -14,6 +14,5 @@
 #define trunnel_reallocarray tor_reallocarray
 #define trunnel_assert tor_assert
 #define trunnel_memwipe(mem, len) memwipe((mem), 0, (len))
-#define trunnel_abort tor_abort_
 
 #endif

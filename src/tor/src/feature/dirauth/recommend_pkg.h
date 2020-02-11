@@ -12,18 +12,6 @@
 #ifndef TOR_RECOMMEND_PKG_H
 #define TOR_RECOMMEND_PKG_H
 
-#ifdef HAVE_MODULE_DIRAUTH
 int validate_recommended_package_line(const char *line);
 
-#else
-
-static inline int
-validate_recommended_package_line(const char *line)
-{
-  (void) line;
-  return 0;
-}
-
-#endif /* defined(HAVE_MODULE_DIRAUTH) */
-
-#endif /* !defined(TOR_RECOMMEND_PKG_H) */
+#endif

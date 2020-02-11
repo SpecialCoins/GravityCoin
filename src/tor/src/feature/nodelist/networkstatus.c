@@ -58,7 +58,7 @@
 #include "feature/client/bridges.h"
 #include "feature/client/entrynodes.h"
 #include "feature/client/transports.h"
-#include "feature/control/control_events.h"
+#include "feature/control/control.h"
 #include "feature/dirauth/reachability.h"
 #include "feature/dircache/consdiffmgr.h"
 #include "feature/dircache/dirserv.h"
@@ -68,7 +68,6 @@
 #include "feature/dircommon/voting_schedule.h"
 #include "feature/dirparse/ns_parse.h"
 #include "feature/hibernate/hibernate.h"
-#include "feature/hs/hs_dos.h"
 #include "feature/nodelist/authcert.h"
 #include "feature/nodelist/dirlist.h"
 #include "feature/nodelist/fmt_routerstatus.h"
@@ -83,7 +82,6 @@
 #include "lib/crypt_ops/crypto_rand.h"
 #include "lib/crypt_ops/crypto_util.h"
 
-#include "feature/dirauth/dirauth_periodic.h"
 #include "feature/dirauth/dirvote.h"
 #include "feature/dirauth/authmode.h"
 #include "feature/dirauth/shared_random.h"
@@ -1675,7 +1673,6 @@ notify_before_networkstatus_changes(const networkstatus_t *old_c,
   notify_control_networkstatus_changed(old_c, new_c);
   dos_consensus_has_changed(new_c);
   relay_consensus_has_changed(new_c);
-  hs_dos_consensus_has_changed(new_c);
 }
 
 /* Called after a new consensus has been put in the global state. It is safe
@@ -1774,7 +1771,7 @@ reload_consensus_from_file(const char *fname,
                                              flavor, flags, source_dir);
     tor_free(content);
   }
-#endif /* defined(_WIN32) */
+#endif
   if (rv < -1) {
     log_warn(LD_GENERAL, "Couldn't set consensus from cache file %s",
              escaped(fname));
@@ -2368,49 +2365,6 @@ networkstatus_getinfo_helper_single(const routerstatus_t *rs)
                                    NULL);
 }
 
-/**
- * Extract status information from <b>ri</b> and from other authority
- * functions and store it in <b>rs</b>. <b>rs</b> is zeroed out before it is
- * set.
- *
- * We assume that node-\>is_running has already been set, e.g. by
- *   dirserv_set_router_is_running(ri, now);
- */
-void
-set_routerstatus_from_routerinfo(routerstatus_t *rs,
-                                 const node_t *node,
-                                 const routerinfo_t *ri)
-{
-  memset(rs, 0, sizeof(routerstatus_t));
-
-  rs->is_authority =
-    router_digest_is_trusted_dir(ri->cache_info.identity_digest);
-
-  /* Set by compute_performance_thresholds or from consensus */
-  rs->is_exit = node->is_exit;
-  rs->is_stable = node->is_stable;
-  rs->is_fast = node->is_fast;
-  rs->is_flagged_running = node->is_running;
-  rs->is_valid = node->is_valid;
-  rs->is_possible_guard = node->is_possible_guard;
-  rs->is_bad_exit = node->is_bad_exit;
-  rs->is_hs_dir = node->is_hs_dir;
-  rs->is_named = rs->is_unnamed = 0;
-
-  rs->published_on = ri->cache_info.published_on;
-  memcpy(rs->identity_digest, node->identity, DIGEST_LEN);
-  memcpy(rs->descriptor_digest, ri->cache_info.signed_descriptor_digest,
-         DIGEST_LEN);
-  rs->addr = ri->addr;
-  strlcpy(rs->nickname, ri->nickname, sizeof(rs->nickname));
-  rs->or_port = ri->or_port;
-  rs->dir_port = ri->dir_port;
-  rs->is_v2_dir = ri->supports_tunnelled_dir_requests;
-
-  tor_addr_copy(&rs->ipv6_addr, &ri->ipv6_addr);
-  rs->ipv6_orport = ri->ipv6_orport;
-}
-
 /** Alloc and return a string describing routerstatuses for the most
  * recent info of each router we know about that is of purpose
  * <b>purpose_string</b>. Return NULL if unrecognized purpose.
@@ -2427,6 +2381,7 @@ networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
   smartlist_t *statuses;
   const uint8_t purpose = router_purpose_from_string(purpose_string);
   routerstatus_t rs;
+  const int bridge_auth = authdir_mode_bridge(get_options());
 
   if (purpose == ROUTER_PURPOSE_UNKNOWN) {
     log_info(LD_DIR, "Unrecognized purpose '%s' when listing router statuses.",
@@ -2443,7 +2398,11 @@ networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
       continue;
     if (ri->purpose != purpose)
       continue;
-    set_routerstatus_from_routerinfo(&rs, node, ri);
+    /* TODO: modifying the running flag in a getinfo is a bad idea */
+    if (bridge_auth && ri->purpose == ROUTER_PURPOSE_BRIDGE)
+      dirserv_set_router_is_running(ri, now);
+    /* then generate and write out status lines for each of them */
+    set_routerstatus_from_routerinfo(&rs, node, ri, now, 0);
     smartlist_add(statuses, networkstatus_getinfo_helper_single(&rs));
   } SMARTLIST_FOREACH_END(ri);
 
@@ -2451,6 +2410,43 @@ networkstatus_getinfo_by_purpose(const char *purpose_string, time_t now)
   SMARTLIST_FOREACH(statuses, char *, cp, tor_free(cp));
   smartlist_free(statuses);
   return answer;
+}
+
+/** Write out router status entries for all our bridge descriptors. */
+void
+networkstatus_dump_bridge_status_to_file(time_t now)
+{
+  char *status = networkstatus_getinfo_by_purpose("bridge", now);
+  char *fname = NULL;
+  char *thresholds = NULL;
+  char *published_thresholds_and_status = NULL;
+  char published[ISO_TIME_LEN+1];
+  const routerinfo_t *me = router_get_my_routerinfo();
+  char fingerprint[FINGERPRINT_LEN+1];
+  char *fingerprint_line = NULL;
+
+  if (me && crypto_pk_get_fingerprint(me->identity_pkey,
+                                      fingerprint, 0) >= 0) {
+    tor_asprintf(&fingerprint_line, "fingerprint %s\n", fingerprint);
+  } else {
+    log_warn(LD_BUG, "Error computing fingerprint for bridge status.");
+  }
+  format_iso_time(published, now);
+  dirserv_compute_bridge_flag_thresholds();
+  thresholds = dirserv_get_flag_thresholds_line();
+  tor_asprintf(&published_thresholds_and_status,
+               "published %s\nflag-thresholds %s\n%s%s",
+               published, thresholds, fingerprint_line ? fingerprint_line : "",
+               status);
+  fname = get_datadir_fname("networkstatus-bridges");
+  if (write_str_to_file(fname,published_thresholds_and_status,0)<0) {
+    log_warn(LD_DIRSERV, "Unable to write networkstatus-bridges file.");
+  }
+  tor_free(thresholds);
+  tor_free(published_thresholds_and_status);
+  tor_free(fname);
+  tor_free(status);
+  tor_free(fingerprint_line);
 }
 
 /* DOCDOC get_net_param_from_list */

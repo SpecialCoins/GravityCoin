@@ -94,7 +94,7 @@ std::vector<ConsensusCheckpoint> CConsensusParams::GetCheckpoints() const
  */
 CMainConsensusParams::CMainConsensusParams()
 {
-    GENESIS_BLOCK = 108888;
+    GENESIS_BLOCK = 560000;
 
     // Notice range for feature activations:
     MIN_ACTIVATION_BLOCKS = 2048;  // ~2 weeks
@@ -130,12 +130,12 @@ CMainConsensusParams::CMainConsensusParams()
     FREEZENOTICE_FEATURE_BLOCK = 999999;
 
     // Sigma releated
-    SIGMA_FEATURE_BLOCK = 212000; // 4 Nov 2019
+    SIGMA_FEATURE_BLOCK = 560000; // 4 Nov 2019
 
     // Property creation fee
-    PROPERTY_CREATION_FEE_BLOCK = 212000;
+    PROPERTY_CREATION_FEE_BLOCK = 560000;
     PROPERTY_CREATION_FEE = 10 * COIN;
-    PROPERTY_CREATION_FEE_RECEIVER.SetString("a1HwTdCmQV3NspP2QqCGpehoFpi8NY4Zg3");
+    PROPERTY_CREATION_FEE_RECEIVER.SetString("HNikz22Sw2VqMar8oPhznKEHaDqyjbxzGS");
 }
 
 /**
@@ -584,8 +584,8 @@ bool IsTransactionTypeAllowed(int txBlock, uint32_t txProperty, uint16_t txType,
         if (entry.txType != txType || entry.txVersion != version) {
             continue;
         }
-        // a property identifier of 0 (= XZC) may be used as wildcard
-        if (EXODUS_PROPERTY_XZC == txProperty && !entry.allowWildcard) {
+        // a property identifier of 0 (= GXX) may be used as wildcard
+        if (EXODUS_PROPERTY_GXX == txProperty && !entry.allowWildcard) {
             continue;
         }
         // transactions are not restricted in the test ecosystem

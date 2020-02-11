@@ -17,27 +17,25 @@ class CSporkMessage;
     - This would result in old clients getting confused about which spork is for what
 */
 static const int SPORK_START                                            = 10001;
-static const int SPORK_END                                              = 10013;
+static const int SPORK_END                                              = 10010;
 
-static const int SPORK_2_INSTANTSEND_ENABLED                            = 10001;
-static const int SPORK_3_INSTANTSEND_BLOCK_FILTERING                    = 10002;
-static const int SPORK_5_INSTANTSEND_MAX_VALUE                          = 10004;
-static const int SPORK_8_ZNODE_PAYMENT_ENFORCEMENT                 = 10007;
-static const int SPORK_9_SUPERBLOCKS_ENABLED                            = 10008;
-static const int SPORK_10_ZNODE_PAY_UPDATED_NODES                  = 10009;
-static const int SPORK_12_RECONSIDER_BLOCKS                             = 10011;
-static const int SPORK_13_OLD_SUPERBLOCK_FLAG                           = 10012;
-static const int SPORK_14_REQUIRE_SENTINEL_FLAG                         = 10013;
+static const int SPORK_1_VERSION_ON                                        = 10001;
+static const int SPORK_2_F_PAYMENT_START                                = 10002;
+static const int SPORK_3_F_PAYMENT_ENFORCEMENT                          = 10003;
+static const int SPORK_4_XNODE_PAYMENT_START                            = 10004;
+static const int SPORK_5_XNODE_PAYMENT_ENFORCEMENT                      = 10005;
+static const int SPORK_7_RECONSIDER_BLOCKS                              = 10007;
+static const int SPORK_9_SIGMA_NEW                                      = 10009;
+static const int SPORK_10_SIGMA                                         = 10010;
 
-static const int64_t SPORK_2_INSTANTSEND_ENABLED_DEFAULT                = 0;            // ON
-static const int64_t SPORK_3_INSTANTSEND_BLOCK_FILTERING_DEFAULT        = 0;            // ON
-static const int64_t SPORK_5_INSTANTSEND_MAX_VALUE_DEFAULT              = 1000;         // 1000 XZC
-static const int64_t SPORK_8_ZNODE_PAYMENT_ENFORCEMENT_DEFAULT     = 4070908800ULL;// OFF
-static const int64_t SPORK_9_SUPERBLOCKS_ENABLED_DEFAULT                = 4070908800ULL;// OFF
-static const int64_t SPORK_10_ZNODE_PAY_UPDATED_NODES_DEFAULT      = 4070908800ULL;// OFF
-static const int64_t SPORK_12_RECONSIDER_BLOCKS_DEFAULT                 = 0;            // 0 BLOCKS
-static const int64_t SPORK_13_OLD_SUPERBLOCK_FLAG_DEFAULT               = 4070908800ULL;// OFF
-static const int64_t SPORK_14_REQUIRE_SENTINEL_FLAG_DEFAULT             = 4070908800ULL;// OFF
+static const int64_t SPORK_1_VERSION_ON_DEFAULT                            = 4070908800;   // OFF
+static const int64_t SPORK_2_F_PAYMENT_START_DEFAULT                    = 4070908800;   // OFF
+static const int64_t SPORK_3_F_PAYMENT_ENFORCEMENT_DEFAULT              = 4070908800;   // OFF
+static const int64_t SPORK_4_XNODE_PAYMENT_START_DEFAULT                = 4070908800;   // OFF
+static const int64_t SPORK_5_XNODE_PAYMENT_ENFORCEMENT_DEFAULT          = 4070908800;   // OFF
+static const int64_t SPORK_7_RECONSIDER_BLOCKS_DEFAULT                  = 0;            // 0 BLOCKS
+static const int64_t SPORK_9_SIGMA_NEW_DEFAULT                          = 4070908800;   // OFF
+static const int64_t SPORK_10_SIGMA_DEFAULT                             = 4070908800;   // OFF
 
 extern std::map<uint256, CSporkMessage> mapSporks;
 

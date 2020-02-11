@@ -1,4 +1,4 @@
-// Copyright (c) 2019 The Zcoin Core Developers
+// Copyright (c) 2019 The GravityCoin Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -9,11 +9,6 @@ using namespace std;
 
 CMintPool::CMintPool(){}
 
-/**
- * Add a mintpool entry
- *
- * @return void
- */
 void CMintPool::Add(pair<uint256, MintPoolEntry> pMint, bool fVerbose)
 {
     insert(pMint);
@@ -22,22 +17,11 @@ void CMintPool::Add(pair<uint256, MintPoolEntry> pMint, bool fVerbose)
         LogPrintf("%s : add %s count %d to mint pool\n", __func__, pMint.first.GetHex().substr(0, 6), get<2>(pMint.second));
 }
 
-/**
- * Sort mintpool entries in terms of the mint count.
- *
- * @return success
- */
 bool SortSmallest(const pair<uint256, MintPoolEntry>& a, const pair<uint256, MintPoolEntry>& b)
 {
     return get<2>(a.second) < get<2>(b.second);
 }
 
-/**
- * place the mintpool in listMints.
- *
- * @param listMints
- * @return void
- */
 void CMintPool::List(list<pair<uint256, MintPoolEntry>>& listMints)
 {
     for (auto pMint : *(this)) {
@@ -47,11 +31,6 @@ void CMintPool::List(list<pair<uint256, MintPoolEntry>>& listMints)
     listMints.sort(SortSmallest);
 }
 
-/**
- * clear the current mintpool
- *
- * @return void
- */
 void CMintPool::Reset()
 {
     clear();

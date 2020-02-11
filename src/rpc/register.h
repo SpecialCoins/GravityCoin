@@ -10,10 +10,7 @@
 #endif
 
 #include "util.h"
-
-#ifdef ENABLE_EXODUS
 #include "../exodus/exodus.h"
-#endif
 
 /** These are in one header file to avoid creating tons of single-function
  * headers for everything under src/rpc/ */
@@ -49,7 +46,6 @@ static inline void RegisterAllCoreRPCCommands(CRPCTable &tableRPC)
     RegisterMiningRPCCommands(tableRPC);
     RegisterRawTransactionRPCCommands(tableRPC);
 
-#ifdef ENABLE_EXODUS
     if (isExodusEnabled()) {
         RegisterExodusDataRetrievalRPCCommands(tableRPC);
         RegisterExodusPayloadCreationRPCCommands(tableRPC);
@@ -59,7 +55,6 @@ static inline void RegisterAllCoreRPCCommands(CRPCTable &tableRPC)
         RegisterExodusTransactionCreationRPCCommands(tableRPC);
 #endif
     }
-#endif
 }
 
 #endif

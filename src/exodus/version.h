@@ -50,7 +50,7 @@ static const int EXODUS_VERSION =
 const std::string ExodusVersion();
 
 //! Returns formatted Bitcoin Core version, e.g. "0.10", "0.9.3"
-const std::string ZcoinCoreVersion();
+const std::string GravityCoinCoreVersion();
 
 
 //#endif // WINDRES_PREPROC

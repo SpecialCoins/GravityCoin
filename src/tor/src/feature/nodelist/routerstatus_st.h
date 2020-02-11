@@ -78,5 +78,5 @@ struct routerstatus_t {
 
 };
 
-#endif /* !defined(ROUTERSTATUS_ST_H) */
+#endif
 

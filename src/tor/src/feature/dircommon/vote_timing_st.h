@@ -20,5 +20,5 @@ struct vote_timing_t {
   int dist_delay;
 };
 
-#endif /* !defined(VOTE_TIMING_ST_H) */
+#endif
 

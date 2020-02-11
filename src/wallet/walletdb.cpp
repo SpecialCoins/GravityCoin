@@ -225,65 +225,24 @@ void CWalletDB::ListAccountCreditDebit(const string &strAccount, list <CAccounti
     pcursor->close();
 }
 
-bool CWalletDB::WriteCoinSpendSerialEntry(const CZerocoinSpendEntry &zerocoinSpend) {
-    return Write(make_pair(string("zcserial"), zerocoinSpend.coinSerial), zerocoinSpend, true);
-}
-
 bool CWalletDB::WriteCoinSpendSerialEntry(const CSigmaSpendEntry &zerocoinSpend) {
     return Write(std::make_pair(std::string("sigma_spend"), zerocoinSpend.coinSerial), zerocoinSpend, true);
-}
-
-bool CWalletDB::HasCoinSpendSerialEntry(const Bignum& serial) {
-    return Exists(std::make_pair(std::string("zcserial"), serial));
 }
 
 bool CWalletDB::HasCoinSpendSerialEntry(const secp_primitives::Scalar& serial) {
     return Exists(std::make_pair(std::string("sigma_spend"), serial));
 }
 
-bool CWalletDB::EraseCoinSpendSerialEntry(const CZerocoinSpendEntry &zerocoinSpend) {
-    return Erase(make_pair(string("zcserial"), zerocoinSpend.coinSerial));
-}
-
 bool CWalletDB::EraseCoinSpendSerialEntry(const CSigmaSpendEntry &zerocoinSpend) {
     return Erase(std::make_pair(std::string("sigma_spend"), zerocoinSpend.coinSerial));
-}
-
-bool
-CWalletDB::WriteZerocoinAccumulator(libzerocoin::Accumulator accumulator, libzerocoin::CoinDenomination denomination,
-                                    int pubcoinid) {
-    return Write(std::make_tuple(string("zcaccumulator"), (unsigned int) denomination, pubcoinid), accumulator);
-}
-
-bool
-CWalletDB::ReadZerocoinAccumulator(libzerocoin::Accumulator &accumulator, libzerocoin::CoinDenomination denomination,
-                                   int pubcoinid) {
-    return Read(std::make_tuple(string("zcaccumulator"), (unsigned int) denomination, pubcoinid), accumulator);
-}
-
-//bool CWalletDB::EraseZerocoinAccumulator(libzerocoin::Accumulator& accumulator, libzerocoin::CoinDenomination denomination, int pubcoinid)
-//{
-//    return Erase(std::make_tuple(string("zcaccumulator"), (unsigned int) denomination, pubcoinid), accumulator);
-//}
-
-bool CWalletDB::WriteZerocoinEntry(const CZerocoinEntry &zerocoin) {
-    return Write(make_pair(string("zerocoin"), zerocoin.value), zerocoin, true);
 }
 
 bool CWalletDB::WriteSigmaEntry(const CSigmaEntry &sigma) {
     return Write(std::make_pair(std::string("sigma_mint"), sigma.value), sigma, true);
 }
 
-bool CWalletDB::ReadZerocoinEntry(const Bignum& pub, CZerocoinEntry& entry) {
-    return Read(std::make_pair(std::string("zerocoin"), pub), entry);
-}
-
 bool CWalletDB::ReadSigmaEntry(const secp_primitives::GroupElement& pub, CSigmaEntry& entry) {
     return Read(std::make_pair(std::string("sigma_mint"), pub), entry);
-}
-
-bool CWalletDB::HasZerocoinEntry(const Bignum& pub) {
-    return Exists(std::make_pair(std::string("zerocoin"), pub));
 }
 
 bool CWalletDB::HasSigmaEntry(const secp_primitives::GroupElement& pub) {
@@ -292,53 +251,6 @@ bool CWalletDB::HasSigmaEntry(const secp_primitives::GroupElement& pub) {
 
 bool CWalletDB::EraseSigmaEntry(const CSigmaEntry &sigma) {
     return Erase(std::make_pair(std::string("sigma_mint"), sigma.value));
-}
-
-bool CWalletDB::EraseZerocoinEntry(const CZerocoinEntry &zerocoin) {
-    return Erase(make_pair(string("zerocoin"), zerocoin.value));
-}
-
-// Check Calculated Blocked for Zerocoin
-bool CWalletDB::ReadCalculatedZCBlock(int &height) {
-    height = 0;
-    return Read(std::string("calculatedzcblock"), height);
-}
-
-bool CWalletDB::WriteCalculatedZCBlock(int height) {
-    return Write(std::string("calculatedzcblock"), height);
-}
-
-void CWalletDB::ListPubCoin(std::list <CZerocoinEntry> &listPubCoin) {
-    Dbc *pcursor = GetCursor();
-    if (!pcursor)
-        throw runtime_error("CWalletDB::ListPubCoin() : cannot create DB cursor");
-    unsigned int fFlags = DB_SET_RANGE;
-    while (true) {
-        // Read next record
-        CDataStream ssKey(SER_DISK, CLIENT_VERSION);
-        if (fFlags == DB_SET_RANGE)
-            ssKey << make_pair(string("zerocoin"), CBigNum(0));
-        CDataStream ssValue(SER_DISK, CLIENT_VERSION);
-        int ret = ReadAtCursor(pcursor, ssKey, ssValue, fFlags);
-        fFlags = DB_NEXT;
-        if (ret == DB_NOTFOUND)
-            break;
-        else if (ret != 0) {
-            pcursor->close();
-            throw runtime_error("CWalletDB::ListPubCoin() : error scanning DB");
-        }
-        // Unserialize
-        string strType;
-        ssKey >> strType;
-        if (strType != "zerocoin")
-            break;
-        CBigNum value;
-        ssKey >> value;
-        CZerocoinEntry zerocoinItem;
-        ssValue >> zerocoinItem;
-        listPubCoin.push_back(zerocoinItem);
-    }
-    pcursor->close();
 }
 
 void CWalletDB::ListSigmaPubCoin(std::list <CSigmaEntry> &listPubCoin) {
@@ -367,45 +279,10 @@ void CWalletDB::ListSigmaPubCoin(std::list <CSigmaEntry> &listPubCoin) {
             break;
         GroupElement value;
         ssKey >> value;
-        CSigmaEntry zerocoinItem;
-        ssValue >> zerocoinItem;
-        listPubCoin.push_back(zerocoinItem);
+        CSigmaEntry SigmaItem;
+        ssValue >> SigmaItem;
+        listPubCoin.push_back(SigmaItem);
     }
-    pcursor->close();
-}
-
-void CWalletDB::ListCoinSpendSerial(std::list <CZerocoinSpendEntry> &listCoinSpendSerial) {
-    Dbc *pcursor = GetCursor();
-    if (!pcursor)
-        throw runtime_error("CWalletDB::ListCoinSpendSerial() : cannot create DB cursor");
-    unsigned int fFlags = DB_SET_RANGE;
-    while (true) {
-        // Read next record
-        CDataStream ssKey(SER_DISK, CLIENT_VERSION);
-        if (fFlags == DB_SET_RANGE)
-            ssKey << make_pair(string("zcserial"), CBigNum(0));
-        CDataStream ssValue(SER_DISK, CLIENT_VERSION);
-        int ret = ReadAtCursor(pcursor, ssKey, ssValue, fFlags);
-        fFlags = DB_NEXT;
-        if (ret == DB_NOTFOUND)
-            break;
-        else if (ret != 0) {
-            pcursor->close();
-            throw runtime_error("CWalletDB::ListCoinSpendSerial() : error scanning DB");
-        }
-
-        // Unserialize
-        string strType;
-        ssKey >> strType;
-        if (strType != "zcserial")
-            break;
-        CBigNum value;
-        ssKey >> value;
-        CZerocoinSpendEntry zerocoinSpendItem;
-        ssValue >> zerocoinSpendItem;
-        listCoinSpendSerial.push_back(zerocoinSpendItem);
-    }
-
     pcursor->close();
 }
 
@@ -537,7 +414,6 @@ public:
     unsigned int nKeyMeta;
     bool fIsEncrypted;
     bool fAnyUnordered;
-    bool fUpgradeHDChain;
     int nFileVersion;
     vector <uint256> vWalletUpgrade;
 
@@ -545,7 +421,6 @@ public:
         nKeys = nCKeys = nKeyMeta = 0;
         fIsEncrypted = false;
         fAnyUnordered = false;
-        fUpgradeHDChain = false;
         nFileVersion = 0;
     }
 };
@@ -572,14 +447,10 @@ bool ReadKeyValue(CWallet *pwallet, CDataStream &ssKey, CDataStream &ssValue,
             CWalletTx wtx;
             ssValue >> wtx;
             CValidationState state;
-//            LogPrintf("CheckTransaction wtx.GetHash()=%s, hash=%s, state.IsValid()=%s\n", wtx.GetHash().ToString(),
-//                      hash.ToString(), state.IsValid());
-            if (!(CheckTransaction(wtx, state, wtx.GetHash(), true, INT_MAX, false, false) && (wtx.GetHash() == hash) &&
+            if (!(CheckTransaction(wtx, state, wtx.GetHash(), true, INT_MAX, false) && (wtx.GetHash() == hash) &&
                   state.IsValid())) {
-//                LogPrintf("ReadKeyValue|CheckTransaction(), wtx.GetHash() = &s\n", wtx.GetHash().ToString());
                 return false;
             }
-//            LogPrintf("done ->readkeyvalue()\n");
             // Undo serialize changes in 31600
             if (31404 <= wtx.fTimeReceivedIsTxTime && wtx.fTimeReceivedIsTxTime <= 31703) {
                 if (!ssValue.empty()) {
@@ -764,17 +635,8 @@ bool ReadKeyValue(CWallet *pwallet, CDataStream &ssKey, CDataStream &ssValue,
         } else if (strType == "hdchain") {
             CHDChain chain;
             ssValue >> chain;
-            if (!pwallet->SetHDChain(chain, true, wss.fUpgradeHDChain, false))
-            {
+            if (!pwallet->SetHDChain(chain, true)) {
                 strErr = "Error reading wallet database: SetHDChain failed";
-                return false;
-            }
-        }
-        else if (strType == "mnemonic") {
-            MnemonicContainer mnContainer;
-            ssValue >> mnContainer;
-            if (!pwallet->SetMnemonicContainer(mnContainer, true)) {
-                strErr = "Error reading wallet database: SetMnemonicContainer failed";
                 return false;
             }
         }
@@ -834,9 +696,6 @@ DBErrors CWalletDB::LoadWallet(CWallet *pwallet) {
                 else {
                     // Leave other errors alone, if we try to fix them we might make things worse.
                     LogPrintf("ReadKeyValue() failed, strType=%s\n", strType);
-                    // Zcoin - MTP
-                    // Need Peter to take a look
-                    //fNoncriticalErrors = true; // ... but do warn the user there is something wrong.
                     if (strType == "tx")
                         // Rescan if there is a bad transaction record:
                         SoftSetBoolArg("-rescan", true);
@@ -891,10 +750,6 @@ DBErrors CWalletDB::LoadWallet(CWallet *pwallet) {
     {
         pwallet->wtxOrdered.insert(make_pair(entry.nOrderPos, CWallet::TxPair((CWalletTx *) 0, &entry)));
     }
-
-    // unencrypted wallets upgrading the wallet version get a new keypool here
-    if (wss.fUpgradeHDChain && !pwallet->IsLocked())
-        pwallet->NewKeyPool();
 
     return result;
 }
@@ -1312,11 +1167,6 @@ bool CWalletDB::WriteHDChain(const CHDChain &chain) {
     return Write(std::string("hdchain"), chain);
 }
 
-bool CWalletDB::WriteMnemonic(const MnemonicContainer& mnContainer) {
-    nWalletDBUpdated++;
-    return Write(std::string("mnemonic"), mnContainer);
-}
-
 bool CWalletDB::ReadMintCount(int32_t& nCount)
 {
     return Read(string("dzc"), nCount);
@@ -1517,25 +1367,6 @@ std::list<CHDMint> CWalletDB::ListHDMints()
 
     pcursor->close();
     return listMints;
-}
-
-bool CWalletDB::ArchiveMintOrphan(const CZerocoinEntry& zerocoin)
-{
-    CDataStream ss(SER_GETHASH, 0);
-    ss << zerocoin.value;
-    uint256 hash = Hash(ss.begin(), ss.end());;
-
-    if (!Write(make_pair(string("zco"), hash), zerocoin)) {
-        LogPrintf("%s : failed to database orphaned zerocoin mint\n", __func__);
-        return false;
-    }
-
-    if (!Erase(make_pair(string("zerocoin"), hash))) {
-        LogPrintf("%s : failed to erase orphaned zerocoin mint\n", __func__);
-        return false;
-    }
-
-    return true;
 }
 
 bool CWalletDB::ArchiveDeterministicOrphan(const CHDMint& dMint)

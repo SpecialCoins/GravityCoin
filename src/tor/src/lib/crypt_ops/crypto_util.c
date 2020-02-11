@@ -30,7 +30,7 @@ DISABLE_GCC_WARNING(redundant-decls)
 #include <openssl/err.h>
 #include <openssl/crypto.h>
 ENABLE_GCC_WARNING(redundant-decls)
-#endif /* defined(ENABLE_OPENSSL) */
+#endif
 
 #include "lib/log/log.h"
 #include "lib/log/util_bug.h"

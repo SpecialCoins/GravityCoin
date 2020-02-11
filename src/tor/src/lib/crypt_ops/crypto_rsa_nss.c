@@ -156,7 +156,7 @@ crypto_pk_get_openssl_evp_pkey_,(crypto_pk_t *pk, int private))
   tor_free(buf);
   return result;
 }
-#endif /* defined(ENABLE_OPENSSL) */
+#endif
 
 /** Allocate and return storage for a public key.  The key itself will not yet
  * be set.

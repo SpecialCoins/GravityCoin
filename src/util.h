@@ -41,7 +41,7 @@ public:
     /** Translate a message to the native language of the user. */
     boost::signals2::signal<std::string (const char* psz)> Translate;
 };
-extern bool fZNode;
+extern bool fXNode;
 extern bool fLiteMode;
 extern int nWalletBackups;
 
@@ -138,7 +138,7 @@ const boost::filesystem::path &GetDataDir(bool fNetSpecific = true);
 const boost::filesystem::path &GetBackupsDir();
 void ClearDatadirCache();
 boost::filesystem::path GetConfigFile();
-boost::filesystem::path GetZnodeConfigFile();
+boost::filesystem::path GetXnodeConfigFile();
 #ifndef WIN32
 boost::filesystem::path GetPidFile();
 void CreatePidFile(const boost::filesystem::path &path, pid_t pid);

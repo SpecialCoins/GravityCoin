@@ -17,11 +17,11 @@
 #include "checkpoints.h"
 #include "compat/sanity.h"
 #include "consensus/validation.h"
+#include "exodus/exodus.h"
 #include "httpserver.h"
 #include "httprpc.h"
 #include "key.h"
 #include "main.h"
-#include "zerocoin.h"
 #include "miner.h"
 #include "net.h"
 #include "policy/policy.h"
@@ -39,14 +39,9 @@
 #include "utilmoneystr.h"
 #include "validationinterface.h"
 #include "validation.h"
-#include "mtpstate.h"
 
 #ifdef ENABLE_WALLET
 #include "wallet/wallet.h"
-#endif
-
-#ifdef ENABLE_EXODUS
-#include "exodus/exodus.h"
 #endif
 
 #include <stdint.h>
@@ -76,12 +71,12 @@
 #include <event2/util.h>
 #include <event2/event.h>
 #include <event2/thread.h>
-#include "activeznode.h"
+#include "activexnode.h"
 #include "darksend.h"
-#include "znode-payments.h"
-#include "znode-sync.h"
-#include "znodeman.h"
-#include "znodeconfig.h"
+#include "xnode-payments.h"
+#include "xnode-sync.h"
+#include "xnodeman.h"
+#include "xnodeconfig.h"
 #include "netfulfilledman.h"
 #include "flat-database.h"
 #include "instantx.h"
@@ -120,7 +115,7 @@ enum BindFlags {
 };
 
 static const char *FEE_ESTIMATES_FILENAME = "fee_estimates.dat";
-
+int nBackups = GetArg("-backups", DEFAULT_BACKUPS);
 extern CTxMemPool stempool;
 
 namespace fs = boost::filesystem;
@@ -223,6 +218,43 @@ void Shutdown() {
     if (!lockShutdown)
         return;
 
+    boost::filesystem::path backupDir = GetDataDir() / "backups";
+    if (nBackups > 0)
+    {
+        if (!boost::filesystem::exists(backupDir))
+        {
+            // Always create backup folder to not confuse the operating system's file browser
+            boost::filesystem::create_directories(backupDir);
+        }
+
+            if (boost::filesystem::exists(backupDir))
+
+            {   std::string strWalletFile = GetArg("-wallet", "wallet.dat");
+                // Create backup of the wallet
+                std::string dateTimeStr = DateTimeStrFormat(".%Y-%m-%d-%H-%M-CLOSED", GetTime());
+                std::string backupPathStr = backupDir.string();
+                backupPathStr += "/" + strWalletFile;
+                std::string sourcePathStr = GetDataDir().string();
+                sourcePathStr += "/" + strWalletFile;
+                boost::filesystem::path sourceFile = sourcePathStr;
+                boost::filesystem::path backupFile = backupPathStr + dateTimeStr;
+                sourceFile.make_preferred();
+                backupFile.make_preferred();
+                if (boost::filesystem::exists(sourceFile))
+                {
+                    try
+                    {
+                        boost::filesystem::copy_file(sourceFile, backupFile);
+                        LogPrintf("Creating backup of %s -> %s\n", sourceFile, backupFile);
+                    } catch (boost::filesystem::filesystem_error& error)
+                    {
+                        LogPrintf("Failed to create backup %s\n", error.what());
+                    }
+
+                }
+            }
+    }
+
     /// Note: Shutdown() must be able to handle cases in which AppInit2() failed part of the way,
     /// for example if the data directory was found to be locked.
     /// Be sure that anything that writes files or flushes caches only does this if the respective
@@ -245,9 +277,9 @@ void Shutdown() {
     GenerateBitcoins(false, 0, Params());
     StopNode();
 
-    CFlatDB<CZnodeMan> flatdb1("zncache.dat", "magicZnodeCache");
+    CFlatDB<CXnodeMan> flatdb1("xncache.dat", "magicXnodeCache");
     flatdb1.Dump(mnodeman);
-    CFlatDB<CZnodePayments> flatdb2("znpayments.dat", "magicZnodePaymentsCache");
+    CFlatDB<CXnodePayments> flatdb2("xnpayments.dat", "magicXnodePaymentsCache");
     flatdb2.Dump(mnpayments);
     CFlatDB<CNetFulfilledRequestManager> flatdb4("netfulfilled.dat", "magicFulfilledCache");
     flatdb4.Dump(netfulfilledman);
@@ -280,11 +312,9 @@ void Shutdown() {
         pblocktree = NULL;
     }
 
-#ifdef ENABLE_EXODUS
     if (isExodusEnabled()) {
         exodus_shutdown();
     }
-#endif
 
 #ifdef ENABLE_WALLET
     if (pwalletMain)
@@ -412,6 +442,7 @@ std::string HelpMessage(HelpMessageMode mode) {
             MIN_DISK_SPACE_FOR_BLOCK_FILES / 1024 / 1024));
     strUsage += HelpMessageOpt("-reindex-chainstate", _("Rebuild chain state from the currently indexed blocks"));
     strUsage += HelpMessageOpt("-reindex", _("Rebuild chain state and block index from the blk*.dat files on disk"));
+    strUsage += HelpMessageOpt("-resync", _("Delete blockchain folders and resync from scratch") + " " + _("on startup"));
 #ifndef WIN32
     strUsage += HelpMessageOpt("-sysperms",
                                _("Create new files with system default permissions, instead of umask 077 (only effective with disabled wallet functionality)"));
@@ -514,6 +545,7 @@ std::string HelpMessage(HelpMessageMode mode) {
 
 #ifdef ENABLE_WALLET
     strUsage += CWallet::GetWalletHelpString(showDebug);
+    strUsage += HelpMessageOpt("-backups=<n>", strprintf("Number of automatic wallet backups <n> transactions (default: %u)", DEFAULT_BACKUPS));
 #endif
 
 #if ENABLE_ZMQ
@@ -671,7 +703,6 @@ std::string HelpMessage(HelpMessageMode mode) {
         strUsage += HelpMessageOpt("-rpcforceutf8", strprintf("Replace invalid UTF-8 encoded characters with question marks in RPC response (default: %d)", 1));
     }
 
-#ifdef ENABLE_EXODUS
     strUsage += HelpMessageGroup("Exodus options:");
     strUsage += HelpMessageOpt("-exodus", "Enable Exodus");
     strUsage += HelpMessageOpt("-startclean", "Clear all persistence files on startup; triggers reparsing of Exodus transactions");
@@ -686,14 +717,13 @@ std::string HelpMessage(HelpMessageMode mode) {
     strUsage += HelpMessageOpt("-exodusactivationallowsender=<addr>", "Whitelist senders of activations");
     strUsage += HelpMessageOpt("-exodusuiwalletscope=<number>", "Max. transactions to show in trade and transaction history (default: 65535)");
     strUsage += HelpMessageOpt("-exodusshowblockconsensushash=<number>", "Calculate and log the consensus hash for the specified block");
-#endif
 
     return strUsage;
 }
 
 std::string LicenseInfo() {
-    const std::string URL_SOURCE_CODE = "<https://github.com/zcoinofficial/zcoin>";
-    const std::string URL_WEBSITE = "<https://zcoin.io/>";
+    const std::string URL_SOURCE_CODE = "<https://github.com/GravityCoinOfficial/GravityCoin/>";
+    const std::string URL_WEBSITE = "<https://gravitycoin.io/>";
     // todo: remove urls from translations on next change
     return CopyrightHolders(strprintf(_("Copyright (C) %i-%i"), 2009, COPYRIGHT_YEAR) + " ") + "\n" +
            "\n" +
@@ -807,7 +837,6 @@ void ThreadImport(std::vector <boost::filesystem::path> vImportFiles) {
     CImportingNow imp;
     // -reindex
     if (fReindex) {
-        MTPState::GetMTPState()->Reset();
         int nFile = 0;
         while (true) {
             CDiskBlockPos pos(nFile, 0);
@@ -869,8 +898,7 @@ void ThreadImport(std::vector <boost::filesystem::path> vImportFiles) {
     if (!GetBoolArg("-disablewallet", false) && zwalletMain) {
         zwalletMain->SyncWithChain();
     }
-    // Need this to restore Sigma spend state
-    if (GetBoolArg("-rescan", false) && zwalletMain) {
+    if (GetBoolArg("-zapwallettxes", false) && zwalletMain) {
         zwalletMain->GetTracker().ListMints();
     }
 #endif
@@ -992,18 +1020,6 @@ void InitParameterInteraction() {
         if (SoftSetBoolArg("-whitelistrelay", true))
             LogPrintf("%s: parameter interaction: -whitelistforcerelay=1 -> setting -whitelistrelay=1\n", __func__);
     }
-
-    // Forcing all mnemonic settings off if -usehd is off.
-    if (!GetBoolArg("-usehd", DEFAULT_USE_HD_WALLET)) {
-        if (SoftSetBoolArg("-usemnemonic", false) && SoftSetArg("-mnemonic", "") && SoftSetArg("-mnemonicpassphrase", "") && SoftSetArg("-hdseed", "not hex"))
-            LogPrintf("%s: Potential  parameter interaction: -usehd=0 -> setting -usemnemonic=0, -mnemonic=\"\", -mnemonicpassphrase=\"\", -hdseed=\"not hex\"\n", __func__);
-    }
-
-    // Forcing all remaining mnemonic settings off if -usemnemonic is off.
-    if (!GetBoolArg("-usemnemonic", DEFAULT_USE_MNEMONIC)) {
-        if (SoftSetArg("-mnemonic", "") && SoftSetArg("-mnemonicpassphrase", "") && SoftSetArg("-hdseed", "not hex"))
-            LogPrintf("%s: Potential parameter interaction: -usemnemonic=0 -> setting -mnemonic=\"\", -mnemonicpassphrase=\"\"\n, -hdseed=\"not hex\"\n", __func__);
-    }
 }
 
 static std::string ResolveErrMsg(const char *const optname, const std::string &strBind) {
@@ -1114,7 +1130,7 @@ void InitLogging() {
     fLogIPs = GetBoolArg("-logips", DEFAULT_LOGIPS);
 
     LogPrintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    LogPrintf("Zcoin version %s\n", FormatFullVersion());
+    LogPrintf("GravityCoin version %s\n", FormatFullVersion());
 }
 
 /** Initialize bitcoin.
@@ -1433,6 +1449,12 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler) {
             threadGroup.create_thread(&ThreadScriptCheck);
     }
 
+    if (mapArgs.count("-sporkkey")) // spork priv key
+    {
+        if (!sporkManager.SetPrivKey(GetArg("-sporkkey", "")))
+            return InitError(_("Unable to sign spork message, wrong key?"));
+    }
+
     // Start the lightweight task scheduler thread
     CScheduler::Function serviceLoop = boost::bind(&CScheduler::serviceQueue, &scheduler);
     threadGroup.create_thread(boost::bind(&TraceThread<CScheduler::Function>, "scheduler", serviceLoop));
@@ -1457,6 +1479,111 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler) {
             return false;
     } // (!fDisableWallet)
 #endif // ENABLE_WALLET
+
+
+    boost::filesystem::path backupDir = GetDataDir() / "backups";
+
+    if (nBackups > 0)
+    {
+    if (!boost::filesystem::exists(backupDir))
+    {
+        // Always create backup folder to not confuse the operating system's file browser
+        boost::filesystem::create_directories(backupDir);
+    }
+        if (boost::filesystem::exists(backupDir))
+
+        {   std::string strWalletFile = GetArg("-wallet", "wallet.dat");
+            // Create backup of the wallet
+            std::string dateTimeStr = DateTimeStrFormat(".%Y-%m-%d-%H-%M-OPENED", GetTime());
+            std::string backupPathStr = backupDir.string();
+            backupPathStr += "/" + strWalletFile;
+            std::string sourcePathStr = GetDataDir().string();
+            sourcePathStr += "/" + strWalletFile;
+            boost::filesystem::path sourceFile = sourcePathStr;
+            boost::filesystem::path backupFile = backupPathStr + dateTimeStr;
+            sourceFile.make_preferred();
+            backupFile.make_preferred();
+            if (boost::filesystem::exists(sourceFile))
+            {
+                try
+                {
+                    boost::filesystem::copy_file(sourceFile, backupFile);
+                    LogPrintf("Creating backup of %s -> %s\n", sourceFile, backupFile);
+                } catch (boost::filesystem::filesystem_error& error)
+                {
+                    LogPrintf("Failed to create backup %s\n", error.what());
+                }
+            }
+
+            // Keep only the last 25 backups, including the new one of course
+            typedef std::multimap<std::time_t, boost::filesystem::path> folder_set_t;
+            folder_set_t folder_set;
+            boost::filesystem::directory_iterator end_iter;
+            boost::filesystem::path backupFolder = backupDir.string();
+            backupFolder.make_preferred();
+            // Build map of backup files for current(!) wallet sorted by last write time
+            boost::filesystem::path currentFile;
+            for (boost::filesystem::directory_iterator dir_iter(backupFolder); dir_iter != end_iter; ++dir_iter) {
+                // Only check regular files
+                if (boost::filesystem::is_regular_file(dir_iter->status())) {
+                    currentFile = dir_iter->path().filename();
+                    // Only add the backups for the current wallet, e.g. wallet.dat.*
+                    if (dir_iter->path().stem().string() == strWalletFile) {
+                        folder_set.insert(folder_set_t::value_type(boost::filesystem::last_write_time(dir_iter->path()), *dir_iter));
+                    }
+                }
+            }
+            // Loop backward through backup files and keep the N newest ones (1 <= N <= 10)
+            int counter = 0;
+            BOOST_REVERSE_FOREACH (PAIRTYPE(const std::time_t, boost::filesystem::path) file, folder_set) {
+                counter++;
+                if (counter > nBackups) {
+                    // More than nBackups backups: delete oldest one(s)
+                    try {
+                        boost::filesystem::remove(file.second);
+                        LogPrintf("Old backup deleted: %s\n", file.second);
+                    } catch (boost::filesystem::filesystem_error& error) {
+                        LogPrintf("Failed to delete backup %s\n", error.what());
+                    }
+                }
+            }
+        }
+    }
+
+    // *********************************************************
+
+        if (GetBoolArg("-resync", false)) {
+            uiInterface.InitMessage(_("Preparing for resync..."));
+            // Delete the local blockchain folders to force a resync from scratch to get a consitent blockchain-state
+            boost::filesystem::path blocksDir = GetDataDir() / "blocks";
+            boost::filesystem::path chainstateDir = GetDataDir() / "chainstate";
+            boost::filesystem::path pathBanlist = GetDataDir() / "banlist.dat";
+
+            LogPrintf("Deleting blockchain folders blocks, chainstate and sporks\n");
+            try {
+                if (boost::filesystem::exists(blocksDir)){
+                    boost::filesystem::remove_all(blocksDir);
+                    LogPrintf("-resync: folder deleted: %s\n", blocksDir.string().c_str());
+                }
+
+                if (boost::filesystem::exists(chainstateDir)){
+                    boost::filesystem::remove_all(chainstateDir);
+                    LogPrintf("-resync: folder deleted: %s\n", chainstateDir.string().c_str());
+                }
+
+                if (boost::filesystem::exists(pathBanlist)){
+                    boost::filesystem::remove(pathBanlist);
+                    LogPrintf("-resync: Banlist deleted: %s\n", pathBanlist.string().c_str());
+                }
+
+            } catch (boost::filesystem::filesystem_error& error) {
+                LogPrintf("Failed to delete blockchain folders %s\n", error.what());
+            }
+        }
+
+
+ // ENABLE_WALLET
+
     // ********************************************************* Step 6: network initialization
     LogPrintf("*** Step 6: network initialization");
     RegisterNodeSignals(GetNodeSignals());
@@ -1558,6 +1685,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler) {
     fDiscover = GetBoolArg("-discover", true);
     fNameLookup = GetBoolArg("-dns", DEFAULT_NAME_LOOKUP);
     fRelayTxes = !GetBoolArg("-blocksonly", DEFAULT_BLOCKSONLY);
+    fDandelion = GetBoolArg("-dandelion", false);
 
     bool fBound = false;
     if (fListen) {
@@ -1581,7 +1709,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler) {
         } else {
             struct in_addr inaddr_any;
             inaddr_any.s_addr = INADDR_ANY;
-            fBound |= Bind(CService((in6_addr)IN6ADDR_ANY_INIT, GetListenPort()), BF_NONE);
+            fBound |= Bind(CService(in6addr_any, GetListenPort()), BF_NONE);
             fBound |= Bind(CService(inaddr_any, GetListenPort()), !fBound ? BF_REPORT_ERROR : BF_NONE);
         }
         if (!fBound)
@@ -1615,7 +1743,9 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler) {
 
     // ********************************************************* Step 7: load block chain
     LogPrintf("Step 7: load block chain ************************************\n");
+
     fReindex = GetBoolArg("-reindex", false);
+
     bool fReindexChainState = GetBoolArg("-reindex-chainstate", false);
 
     // Upgrading to 0.8; hard-link the old blknnnn.dat files into /blocks/
@@ -1683,21 +1813,11 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler) {
                 delete pblocktree;
 
                 pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
-
-                if (!fReindex) {
-                    // Check existing block index database version, reindex if needed
-                    if (pblocktree->GetBlockIndexVersion() < ZC_ADVANCED_INDEX_VERSION) {
-                        LogPrintf("Upgrade to new version of block index required, reindex forced\n");
-                        delete pblocktree;
-                        fReindex = fReset = true;
-                        pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
-                    }
-                }
-
                 pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex || fReindexChainState);
                 pcoinscatcher = new CCoinsViewErrorCatcher(pcoinsdbview);
                 pcoinsTip = new CCoinsViewCache(pcoinscatcher);
                 LogPrintf("fReindex = %s\n", fReindex);
+
                 if (fReindex) {
                     pblocktree->WriteReindexing(true);
                     //If we're reindexing in prune mode, wipe away unusable block files and all undo data files
@@ -1708,18 +1828,6 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler) {
                 if (!LoadBlockIndex()) {
                     strLoadError = _("Error loading block database");
                     break;
-                }
-
-                if (!fReindex) {
-                    CBlockIndex *tip = chainActive.Tip();
-                    if (tip && tip->nHeight >= chainparams.GetConsensus().nSigmaStartBlock) {
-                        const uint256* phash = tip->phashBlock;
-                        if (pblocktree->GetBlockIndexVersion(*phash) < SIGMA_PROTOCOL_ENABLEMENT_VERSION) {
-                            strLoadError = _(
-                                    "Block index is outdated, reindex required\n");
-                            break;
-                        }
-                    }
                 }
 
                 // If the loaded chain has a wrong genesis, bail out immediately
@@ -1827,27 +1935,8 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler) {
         mempool.ReadFeeEstimates(est_filein);
     fFeeEstimatesInitialized = true;
 
+    // ********************************************************* Step 7.5: load exodus
 
-    // ********************************************************* Step 8: load wallet
-
-#ifdef ENABLE_WALLET
-    LogPrintf("Step 8: load wallet ************************************\n");
-    if (fDisableWallet) {
-        pwalletMain = NULL;
-        zwalletMain = NULL;
-        LogPrintf("Wallet disabled!\n");
-    } else {
-        CWallet::InitLoadWallet();
-        if (!pwalletMain)
-            return false;
-    }
-#else // ENABLE_WALLET
-    LogPrintf("No wallet support compiled in!\n");
-#endif // !ENABLE_WALLET
-
-    // ********************************************************* Step 8.5: load exodus
-
-#ifdef ENABLE_EXODUS
     if (isExodusEnabled()) {
         if (!fTxIndex) {
             // ask the user if they would like us to modify their config file for them
@@ -1886,11 +1975,29 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler) {
 
         uiInterface.InitMessage(_("Parsing Exodus transactions..."));
         exodus_init();
+    }
 
-        // Exodus code should be initialized and wallet should now be loaded, perform an initial populate
+    // ********************************************************* Step 8: load wallet
+
+#ifdef ENABLE_WALLET
+    LogPrintf("Step 8: load wallet ************************************\n");
+    if (fDisableWallet) {
+        pwalletMain = NULL;
+        zwalletMain = NULL;
+        LogPrintf("Wallet disabled!\n");
+    } else {
+        CWallet::InitLoadWallet();
+        if (!pwalletMain)
+            return false;
+    }
+#else // ENABLE_WALLET
+    LogPrintf("No wallet support compiled in!\n");
+#endif // !ENABLE_WALLET
+
+    // Exodus code should be initialized and wallet should now be loaded, perform an initial populate
+    if (isExodusEnabled()) {
         CheckWalletUpdate();
     }
-#endif
 
     // ********************************************************* Step 9: data directory maintenance
     LogPrintf("Step 9: data directory maintenance **********************\n");
@@ -1978,46 +2085,46 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler) {
                      chainparams);
 
     // ********************************************************* Step 11a: setup PrivateSend
-    fZNode = GetBoolArg("-znode", false);
+    fXNode = GetBoolArg("-xnode", false);
 
-    LogPrintf("fZNode = %s\n", fZNode);
-    LogPrintf("znodeConfig.getCount(): %s\n", znodeConfig.getCount());
+    LogPrintf("fXNode = %s\n", fXNode);
+    LogPrintf("xnodeConfig.getCount(): %s\n", xnodeConfig.getCount());
 
-    if ((fZNode || znodeConfig.getCount() > 0) && !fTxIndex) {
-        return InitError("Enabling Znode support requires turning on transaction indexing."
+    if ((fXNode || xnodeConfig.getCount() > 0) && !fTxIndex) {
+        return InitError("Enabling Xnode support requires turning on transaction indexing."
                                  "Please add txindex=1 to your configuration and start with -reindex");
     }
 
-    if (fZNode) {
-        LogPrintf("ZNODE:\n");
+    if (fXNode) {
+        LogPrintf("XNODE:\n");
 
-        if (!GetArg("-znodeaddr", "").empty()) {
-            // Hot Znode (either local or remote) should get its address in
-            // CActiveZnode::ManageState() automatically and no longer relies on Znodeaddr.
-            return InitError(_("znodeaddr option is deprecated. Please use znode.conf to manage your remote znodes."));
+        if (!GetArg("-xnodeaddr", "").empty()) {
+            // Hot Xnode (either local or remote) should get its address in
+            // CActiveXnode::ManageState() automatically and no longer relies on Xnodeaddr.
+            return InitError(_("xnodeaddr option is deprecated. Please use xnode.conf to manage your remote xnodes."));
         }
 
-        std::string strZnodePrivKey = GetArg("-znodeprivkey", "");
-        if (!strZnodePrivKey.empty()) {
-            if (!darkSendSigner.GetKeysFromSecret(strZnodePrivKey, activeZnode.keyZnode,
-                                                  activeZnode.pubKeyZnode))
-                return InitError(_("Invalid znodeprivkey. Please see documentation."));
+        std::string strXnodePrivKey = GetArg("-xnodeprivkey", "");
+        if (!strXnodePrivKey.empty()) {
+            if (!darkSendSigner.GetKeysFromSecret(strXnodePrivKey, activeXnode.keyXnode,
+                                                  activeXnode.pubKeyXnode))
+                return InitError(_("Invalid xnodeprivkey. Please see documentation."));
 
-            LogPrintf("  pubKeyZnode: %s\n", CBitcoinAddress(activeZnode.pubKeyZnode.GetID()).ToString());
+            LogPrintf("  pubKeyXnode: %s\n", CBitcoinAddress(activeXnode.pubKeyXnode.GetID()).ToString());
         } else {
             return InitError(
-                    _("You must specify a znodeprivkey in the configuration. Please see documentation for help."));
+                    _("You must specify a xnodeprivkey in the configuration. Please see documentation for help."));
         }
     }
 
-    LogPrintf("Using Znode config file %s\n", GetZnodeConfigFile().string());
+    LogPrintf("Using Xnode config file %s\n", GetXnodeConfigFile().string());
 
-    if (GetBoolArg("-znconflock", true) && pwalletMain && (znodeConfig.getCount() > 0)) {
+    if (GetBoolArg("-xnconflock", true) && pwalletMain && (xnodeConfig.getCount() > 0)) {
         LOCK(pwalletMain->cs_wallet);
-        LogPrintf("Locking Znodes:\n");
+        LogPrintf("Locking Xnodes:\n");
         uint256 mnTxHash;
         int outputIndex;
-        BOOST_FOREACH(CZnodeConfig::CZnodeEntry mne, znodeConfig.getEntries()) {
+        BOOST_FOREACH(CXnodeConfig::CXnodeEntry mne, xnodeConfig.getEntries()) {
             mnTxHash.SetHex(mne.getTxHash());
             outputIndex = boost::lexical_cast<unsigned int>(mne.getOutputIndex());
             COutPoint outpoint = COutPoint(mnTxHash, outputIndex);
@@ -2048,10 +2155,10 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler) {
 //    nInstantSendDepth = GetArg("-instantsenddepth", DEFAULT_INSTANTSEND_DEPTH);
 //    nInstantSendDepth = std::min(std::max(nInstantSendDepth, 0), 60);
 
-    // lite mode disables all Znode and Darksend related functionality
+    // lite mode disables all Xnode and Darksend related functionality
     fLiteMode = GetBoolArg("-litemode", false);
-    if (fZNode && fLiteMode) {
-        return InitError("You can not start a znode in litemode");
+    if (fXNode && fLiteMode) {
+        return InitError("You can not start a xnode in litemode");
     }
 
     LogPrintf("fLiteMode %d\n", fLiteMode);
@@ -2064,21 +2171,21 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler) {
     // ********************************************************* Step 11b: Load cache data
 
     // LOAD SERIALIZED DAT FILES INTO DATA CACHES FOR INTERNAL USE
-    if (GetBoolArg("-persistentznodestate", true)) {
-        uiInterface.InitMessage(_("Loading znode cache..."));
-        CFlatDB<CZnodeMan> flatdb1("zncache.dat", "magicZnodeCache");
+    if (GetBoolArg("-persistentxnodestate", true)) {
+        uiInterface.InitMessage(_("Loading xnode cache..."));
+        CFlatDB<CXnodeMan> flatdb1("xncache.dat", "magicXnodeCache");
         if (!flatdb1.Load(mnodeman)) {
-            return InitError("Failed to load znode cache from zncache.dat");
+            return InitError("Failed to load xnode cache from xncache.dat");
         }
 
         if (mnodeman.size()) {
-            uiInterface.InitMessage(_("Loading Znode payment cache..."));
-            CFlatDB<CZnodePayments> flatdb2("znpayments.dat", "magicZnodePaymentsCache");
+            uiInterface.InitMessage(_("Loading Xnode payment cache..."));
+            CFlatDB<CXnodePayments> flatdb2("xnpayments.dat", "magicXnodePaymentsCache");
             if (!flatdb2.Load(mnpayments)) {
-                return InitError("Failed to load znode payments cache from znpayments.dat");
+                return InitError("Failed to load xnode payments cache from xnpayments.dat");
             }
         } else {
-            uiInterface.InitMessage(_("Znode cache is empty, skipping payments cache..."));
+            uiInterface.InitMessage(_("Xnode cache is empty, skipping payments cache..."));
         }
 
         uiInterface.InitMessage(_("Loading fulfilled requests cache..."));
@@ -2090,7 +2197,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler) {
     //     LogPrint"Failed to load fulfilled requests cache from netfulfilled.dat");
     // }
 
-    // ********************************************************* Step 11c: update block tip in Zcoin modules
+    // ********************************************************* Step 11c: update block tip in GravityCoin modules
 
     // force UpdatedBlockTip to initialize pCurrentBlockIndex for DS, MN payments and budgets
     // but don't call it directly to prevent triggering of other listeners like zmq etc.
@@ -2098,7 +2205,7 @@ bool AppInit2(boost::thread_group &threadGroup, CScheduler &scheduler) {
     mnodeman.UpdatedBlockTip(chainActive.Tip());
     darkSendPool.UpdatedBlockTip(chainActive.Tip());
     mnpayments.UpdatedBlockTip(chainActive.Tip());
-    znodeSync.UpdatedBlockTip(chainActive.Tip());
+    xnodeSync.UpdatedBlockTip(chainActive.Tip());
     // governance.UpdatedBlockTip(chainActive.Tip());
 
     // ********************************************************* Step 11d: start dash-privatesend thread

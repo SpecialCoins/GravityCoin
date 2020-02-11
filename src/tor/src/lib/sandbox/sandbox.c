@@ -294,7 +294,6 @@ sb_rt_sigaction(scmp_filter_ctx ctx, sandbox_cfg_t *filter)
   unsigned i;
   int rc;
   int param[] = { SIGINT, SIGTERM, SIGPIPE, SIGUSR1, SIGUSR2, SIGHUP, SIGCHLD,
-                  SIGSEGV, SIGILL, SIGFPE, SIGBUS, SIGSYS, SIGIO,
 #ifdef SIGXFSZ
       SIGXFSZ
 #endif
@@ -444,7 +443,7 @@ libc_uses_openat_for_everything(void)
     return 1;
   else
     return 0;
-#else /* !defined(CHECK_LIBC_VERSION) */
+#else /* !(defined(CHECK_LIBC_VERSION)) */
   return 0;
 #endif /* defined(CHECK_LIBC_VERSION) */
 }

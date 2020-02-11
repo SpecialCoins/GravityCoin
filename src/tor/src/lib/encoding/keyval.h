@@ -14,4 +14,4 @@
 
 int string_is_key_value(int severity, const char *string);
 
-#endif /* !defined(TOR_KEYVAL_H) */
+#endif

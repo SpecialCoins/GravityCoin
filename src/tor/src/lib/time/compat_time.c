@@ -164,8 +164,6 @@ static int64_t last_tick_count = 0;
  * to be monotonic; increments them as appropriate so that they actually
  * _are_ monotonic.
  *
- * The returned time may be the same as the previous returned time.
- *
  * Caller must hold lock. */
 STATIC int64_t
 ratchet_performance_counter(int64_t count_raw)
@@ -203,8 +201,6 @@ static struct timeval timeofday_offset = { 0, 0 };
 /** Helper for gettimeofday(): Called with a sequence of times that are
  * supposed to be monotonic; increments them as appropriate so that they
  * actually _are_ monotonic.
- *
- * The returned time may be the same as the previous returned time.
  *
  * Caller must hold lock. */
 STATIC void
@@ -274,9 +270,7 @@ monotime_init_internal(void)
 }
 
 /**
- * Set "out" to the most recent monotonic time value.
- *
- * The returned time may be the same as the previous returned time.
+ * Set "out" to the most recent monotonic time value
  */
 void
 monotime_get(monotime_t *out)
@@ -304,12 +298,10 @@ monotime_coarse_get(monotime_coarse_t *out)
 #endif /* defined(TOR_UNIT_TESTS) */
   out->abstime_ = mach_approximate_time();
 }
-#endif /* defined(HAVE_MACH_APPROXIMATE_TIME) */
+#endif
 
 /**
  * Return the number of nanoseconds between <b>start</b> and <b>end</b>.
- *
- * The returned value may be equal to zero.
  */
 int64_t
 monotime_diff_nsec(const monotime_t *start,
@@ -527,7 +519,7 @@ monotime_init_internal(void)
 
   HANDLE h = load_windows_system_library(TEXT("kernel32.dll"));
   if (h) {
-    GetTickCount64_fn = (GetTickCount64_fn_t) (void(*)(void))
+    GetTickCount64_fn = (GetTickCount64_fn_t)
       GetProcAddress(h, "GetTickCount64");
   }
   // We can't call FreeLibrary(h) here, because freeing the handle may
@@ -767,7 +759,7 @@ monotime_coarse_zero(monotime_coarse_t *out)
 {
   memset(out, 0, sizeof(*out));
 }
-#endif /* defined(MONOTIME_COARSE_TYPE_IS_DIFFERENT) */
+#endif
 
 int64_t
 monotime_diff_usec(const monotime_t *start,
@@ -833,7 +825,7 @@ monotime_coarse_absolute_msec(void)
 {
   return monotime_coarse_absolute_nsec() / ONE_MILLION;
 }
-#else /* !defined(MONOTIME_COARSE_FN_IS_DIFFERENT) */
+#else
 #define initialized_at_coarse initialized_at
 #endif /* defined(MONOTIME_COARSE_FN_IS_DIFFERENT) */
 
@@ -865,7 +857,7 @@ monotime_msec_to_approx_coarse_stamp_units(uint64_t msec)
     mach_time_info.numer;
   return abstime_val >> monotime_shift;
 }
-#else /* !defined(__APPLE__) */
+#else
 uint64_t
 monotime_coarse_stamp_units_to_approx_msec(uint64_t units)
 {
@@ -876,4 +868,4 @@ monotime_msec_to_approx_coarse_stamp_units(uint64_t msec)
 {
   return (msec * STAMP_TICKS_PER_SECOND) / 1000;
 }
-#endif /* defined(__APPLE__) */
+#endif

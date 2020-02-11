@@ -10,14 +10,14 @@
 #include "utilstrencodings.h"
 
 /** Fees smaller than this (in ztoshi) are considered zero fee (for transaction creation) */
-int64_t CTransaction::nMinTxFee = 1000000; // 0.01 zcoin
+int64_t CTransaction::nMinTxFee = 1000000; // 0.01 coin
 /** Fees smaller than this (in ztoshi) are considered zero fee (for relaying) */
-int64_t CTransaction::nMinRelayTxFee = 1000000; // 0.01 zcoin
+int64_t CTransaction::nMinRelayTxFee = 1000000; // 0.01 coin
 
 /** Default for -blockprioritysize, maximum space for zero/low-fee transactions **/
 static const unsigned int DEFAULT_BLOCK_PRIORITY_SIZE = 50000; // 50KB
 /** Dust Soft Limit, allowed with additional fee per output */
-static const int64_t DUST_SOFT_LIMIT = 100000; // 0.001 XZC
+static const int64_t DUST_SOFT_LIMIT = 100000; // 0.001 GXX
 /** The maximum allowed size for a serialized block, in bytes (network rule) */
 static const unsigned int MAX_BLOCK_SIZE = 2000000;                      // 2000KB block hard limit
 /** Obsolete: maximum size for mined blocks */
@@ -55,11 +55,6 @@ bool CTxIn::IsZerocoinSpend() const
 bool CTxIn::IsSigmaSpend() const
 {
     return (prevout.IsSigmaMintGroup() && scriptSig.size() > 0 && (scriptSig[0] == OP_SIGMASPEND) );
-}
-
-bool CTxIn::IsZerocoinRemint() const
-{
-    return (prevout.IsNull() && scriptSig.size() > 0 && (scriptSig[0] == OP_ZEROCOINTOSIGMAREMINT));
 }
 
 std::string CTxIn::ToString() const
@@ -143,7 +138,7 @@ int64_t CTransaction::GetMinFee(unsigned int nBlockSize, bool fAllowFree, enum G
             nMinFee = 0;
     }
 
-    // ZCoin
+
     // To limit dust spam, add nBaseFee for each output less than DUST_SOFT_LIMIT
     for (unsigned int i = 0; i < vout.size(); i++)
         if (vout[i].nValue < DUST_SOFT_LIMIT) {
@@ -210,7 +205,7 @@ double CTransaction::ComputePriority(double dPriorityInputs, unsigned int nTxSiz
 
 bool CTransaction::IsCoinBase() const
 {
-    return (vin.size() == 1 && vin[0].prevout.IsNull() && (vin[0].scriptSig.size() == 0 || (vin[0].scriptSig[0] != OP_ZEROCOINSPEND && vin[0].scriptSig[0] != OP_ZEROCOINTOSIGMAREMINT)));
+    return (vin.size() == 1 && vin[0].prevout.IsNull() && (vin[0].scriptSig.size() == 0 || (vin[0].scriptSig[0] != OP_ZEROCOINSPEND)));
 }
 
 bool CTransaction::IsZerocoinSpend() const
@@ -242,9 +237,6 @@ bool CTransaction::IsZerocoinMint() const
 
 bool CTransaction::IsSigmaMint() const
 {
-    if (IsZerocoinRemint())
-        return false;
-        
     for (const CTxOut &txout: vout) {
         if (txout.scriptPubKey.IsSigmaMint())
             return true;
@@ -259,16 +251,7 @@ bool CTransaction::IsZerocoinTransaction() const
 
 bool CTransaction::IsZerocoinV3SigmaTransaction() const
 {
-    return IsSigmaSpend() || IsSigmaMint() || IsZerocoinRemint();
-}
-
-bool CTransaction::IsZerocoinRemint() const
-{
-    for (const CTxIn &txin: vin) {
-        if (txin.IsZerocoinRemint())
-            return true;
-    }
-    return false;
+    return IsSigmaSpend() || IsSigmaMint();
 }
 
 unsigned int CTransaction::CalculateModifiedSize(unsigned int nTxSize) const

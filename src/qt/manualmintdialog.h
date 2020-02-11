@@ -1,5 +1,5 @@
-#ifndef ZCOIN_QT_MANUALMINTDIALOG_H
-#define ZCOIN_QT_MANUALMINTDIALOG_H
+#ifndef GRAVITYCOIN_QT_MANUALMINTDIALOG_H
+#define GRAVITYCOIN_QT_MANUALMINTDIALOG_H
 
 #include <QDialog>
 
@@ -22,4 +22,4 @@ private:
     const PlatformStyle *platformStyle;
 };
 
-#endif // ZCOIN_QT_MANUALMINTDIALOG_H
+#endif // GRAVITYCOIN_QT_MANUALMINTDIALOG_H

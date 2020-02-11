@@ -129,7 +129,7 @@ tor_ntohll(uint64_t a)
 {
   return a;
 }
-#else /* !defined(WORDS_BIGENDIAN) */
+#else
 static inline uint16_t
 tor_htons(uint16_t a)
 {
@@ -177,6 +177,6 @@ tor_ntohll(uint64_t a)
 {
   return tor_htonll(a);
 }
-#endif /* defined(WORDS_BIGENDIAN) */
+#endif
 
-#endif /* !defined(TOR_BYTES_H) */
+#endif

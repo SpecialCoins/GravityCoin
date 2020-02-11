@@ -167,6 +167,6 @@ STATIC int handle_response_fetch_consensus(dir_connection_t *conn,
 
 STATIC dirinfo_type_t dir_fetch_type(int dir_purpose, int router_purpose,
                                      const char *resource);
-#endif /* defined(DIRCLIENT_PRIVATE) */
+#endif
 
 #endif /* !defined(TOR_DIRCLIENT_H) */

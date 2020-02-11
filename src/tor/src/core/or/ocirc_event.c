@@ -26,103 +26,59 @@
 #include "core/or/origin_circuit_st.h"
 #include "lib/subsys/subsys.h"
 
-DECLARE_PUBLISH(ocirc_state);
-DECLARE_PUBLISH(ocirc_chan);
-DECLARE_PUBLISH(ocirc_cevent);
+/** List of subscribers */
+static smartlist_t *ocirc_event_rcvrs;
 
-static void
-ocirc_event_free(msg_aux_data_t u)
-{
-  tor_free_(u.ptr);
-}
-
-static char *
-ocirc_state_fmt(msg_aux_data_t u)
-{
-  ocirc_state_msg_t *msg = (ocirc_state_msg_t *)u.ptr;
-  char *s = NULL;
-
-  tor_asprintf(&s, "<gid=%"PRIu32" state=%d onehop=%d>",
-               msg->gid, msg->state, msg->onehop);
-  return s;
-}
-
-static char *
-ocirc_chan_fmt(msg_aux_data_t u)
-{
-  ocirc_chan_msg_t *msg = (ocirc_chan_msg_t *)u.ptr;
-  char *s = NULL;
-
-  tor_asprintf(&s, "<gid=%"PRIu32" chan=%"PRIu64" onehop=%d>",
-               msg->gid, msg->chan, msg->onehop);
-  return s;
-}
-
-static char *
-ocirc_cevent_fmt(msg_aux_data_t u)
-{
-  ocirc_cevent_msg_t *msg = (ocirc_cevent_msg_t *)u.ptr;
-  char *s = NULL;
-
-  tor_asprintf(&s, "<gid=%"PRIu32" evtype=%d reason=%d onehop=%d>",
-               msg->gid, msg->evtype, msg->reason, msg->onehop);
-  return s;
-}
-
-static dispatch_typefns_t ocirc_state_fns = {
-  .free_fn = ocirc_event_free,
-  .fmt_fn = ocirc_state_fmt,
-};
-
-static dispatch_typefns_t ocirc_chan_fns = {
-  .free_fn = ocirc_event_free,
-  .fmt_fn = ocirc_chan_fmt,
-};
-
-static dispatch_typefns_t ocirc_cevent_fns = {
-  .free_fn = ocirc_event_free,
-  .fmt_fn = ocirc_cevent_fmt,
-};
-
+/** Initialize subscriber list */
 static int
-ocirc_add_pubsub(struct pubsub_connector_t *connector)
+ocirc_event_init(void)
 {
-  if (DISPATCH_REGISTER_TYPE(connector, ocirc_state, &ocirc_state_fns))
-    return -1;
-  if (DISPATCH_REGISTER_TYPE(connector, ocirc_chan, &ocirc_chan_fns))
-    return -1;
-  if (DISPATCH_REGISTER_TYPE(connector, ocirc_cevent, &ocirc_cevent_fns))
-    return -1;
-  if (DISPATCH_ADD_PUB(connector, ocirc, ocirc_state))
-    return -1;
-  if (DISPATCH_ADD_PUB(connector, ocirc, ocirc_chan))
-    return -1;
-  if (DISPATCH_ADD_PUB(connector, ocirc, ocirc_cevent))
-    return -1;
+  ocirc_event_rcvrs = smartlist_new();
   return 0;
 }
 
-void
-ocirc_state_publish(ocirc_state_msg_t *msg)
+/** Free subscriber list */
+static void
+ocirc_event_fini(void)
 {
-  PUBLISH(ocirc_state, msg);
+  smartlist_free(ocirc_event_rcvrs);
 }
 
+/**
+ * Subscribe to messages about origin circuit events
+ *
+ * Register a callback function to receive messages about origin
+ * circuits.  The publisher calls this function synchronously.
+ **/
 void
-ocirc_chan_publish(ocirc_chan_msg_t *msg)
+ocirc_event_subscribe(ocirc_event_rcvr_t fn)
 {
-  PUBLISH(ocirc_chan, msg);
+  tor_assert(fn);
+  /* Don't duplicate subscriptions. */
+  if (smartlist_contains(ocirc_event_rcvrs, fn))
+    return;
+
+  smartlist_add(ocirc_event_rcvrs, fn);
 }
 
+/**
+ * Publish a message about OR connection events
+ *
+ * This calls the subscriber receiver function synchronously.
+ **/
 void
-ocirc_cevent_publish(ocirc_cevent_msg_t *msg)
+ocirc_event_publish(const ocirc_event_msg_t *msg)
 {
-  PUBLISH(ocirc_cevent, msg);
+  SMARTLIST_FOREACH_BEGIN(ocirc_event_rcvrs, ocirc_event_rcvr_t, fn) {
+    tor_assert(fn);
+    (*fn)(msg);
+  } SMARTLIST_FOREACH_END(fn);
 }
 
 const subsys_fns_t sys_ocirc_event = {
   .name = "ocirc_event",
   .supported = true,
   .level = -32,
-  .add_pubsub = ocirc_add_pubsub,
+  .initialize = ocirc_event_init,
+  .shutdown = ocirc_event_fini,
 };

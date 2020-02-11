@@ -13,4 +13,4 @@
 
 int compute_num_cpus(void);
 
-#endif /* !defined(TOR_NUMCPUS_H) */
+#endif

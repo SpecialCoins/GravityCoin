@@ -1,5 +1,5 @@
-#ifndef ZCOIN_SIGMA_SIGMAPLUS_VERIFIER_H
-#define ZCOIN_SIGMA_SIGMAPLUS_VERIFIER_H
+#ifndef GRAVITYCOIN_SIGMA_SIGMAPLUS_VERIFIER_H
+#define GRAVITYCOIN_SIGMA_SIGMAPLUS_VERIFIER_H
 
 #include "r1_proof_verifier.h"
 #include "util.h"
@@ -14,8 +14,7 @@ public:
                       int n, int m_);
 
     bool verify(const std::vector<GroupElement>& commits,
-                const SigmaPlusProof<Exponent, GroupElement>& proof,
-                bool fPadding) const;
+                const SigmaPlusProof<Exponent, GroupElement>& proof) const;
 
 private:
     GroupElement g_;
@@ -28,4 +27,4 @@ private:
 
 #include "sigmaplus_verifier.hpp"
 
-#endif // ZCOIN_SIGMA_SIGMAPLUS_VERIFIER_H
+#endif // GRAVITYCOIN_SIGMA_SIGMAPLUS_VERIFIER_H

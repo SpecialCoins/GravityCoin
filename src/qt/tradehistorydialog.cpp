@@ -306,7 +306,7 @@ int TradeHistoryDialog::PopulateTradeHistoryMap()
     for (std::map<std::string,uint256>::reverse_iterator it = walletTransactions.rbegin(); it != walletTransactions.rend(); it++) {
         uint256 hash = it->second;
 
-        // use levelDB to perform a fast check on whether it's a Zcoin or Exodus tx and whether it's a trade
+        // use levelDB to perform a fast check on whether it's a GravityCoin or Exodus tx and whether it's a trade
         std::string tempStrValue;
         {
             LOCK(cs_main);
@@ -535,8 +535,8 @@ void TradeHistoryDialog::setClientModel(ClientModel *model)
 {
     this->clientModel = model;
     if (model != NULL) {
-        connect(model, SIGNAL(refreshOmniBalance()), this, SLOT(UpdateTradeHistoryTable()));
-        connect(model, SIGNAL(reinitOmniState()), this, SLOT(ReinitTradeHistoryTable()));
+        connect(model, SIGNAL(refreshExodusBalance()), this, SLOT(UpdateTradeHistoryTable()));
+        connect(model, SIGNAL(reinitExodusState()), this, SLOT(ReinitTradeHistoryTable()));
     }
 }
 

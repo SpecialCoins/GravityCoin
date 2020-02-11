@@ -77,7 +77,7 @@ void Wallet::ClearAllChainState()
     mintWallet.ClearMintsChainState();
 }
 
-SigmaSpend Wallet::CreateSigmaSpend(PropertyId property, SigmaDenomination denomination, bool fPadding)
+SigmaSpend Wallet::CreateSigmaSpend(PropertyId property, SigmaDenomination denomination)
 {
     LOCK(cs_main);
 
@@ -102,9 +102,9 @@ SigmaSpend Wallet::CreateSigmaSpend(PropertyId property, SigmaDenomination denom
 
     // Create spend.
     auto key = GetKey(mint.get());
-    SigmaProof proof(DefaultSigmaParams, key, anonimitySet.begin(), anonimitySet.end(), fPadding);
+    SigmaProof proof(DefaultSigmaParams, key, anonimitySet.begin(), anonimitySet.end());
 
-    if (!VerifySigmaSpend(mint->property, mint->denomination, mint->chainState.group, anonimitySet.size(), proof, fPadding)) {
+    if (!VerifySigmaSpend(mint->property, mint->denomination, mint->chainState.group, anonimitySet.size(), proof)) {
         throw WalletError(_("Failed to create spendable spend"));
     }
 

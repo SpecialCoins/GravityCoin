@@ -1,5 +1,5 @@
-#ifndef ZCOIN_SIGMA_SIGMA_PRIMITIVES_H
-#define ZCOIN_SIGMA_SIGMA_PRIMITIVES_H
+#ifndef GRAVITYCOIN_SIGMA_SIGMA_PRIMITIVES_H
+#define GRAVITYCOIN_SIGMA_SIGMA_PRIMITIVES_H
 
 #include "../secp256k1/include/MultiExponent.h"
 #include "../secp256k1/include/GroupElement.h"
@@ -40,4 +40,4 @@ public:
 
 #include "sigma_primitives.hpp"
 
-#endif // ZCOIN_SIGMA_SIGMA_PRIMITIVES_H
+#endif // GRAVITYCOIN_SIGMA_SIGMA_PRIMITIVES_H

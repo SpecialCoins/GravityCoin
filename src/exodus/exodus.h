@@ -1,5 +1,5 @@
-#ifndef ZCOIN_EXODUS_EXODUS_H
-#define ZCOIN_EXODUS_EXODUS_H
+#ifndef GRAVITYCOIN_EXODUS_EXODUS_H
+#define GRAVITYCOIN_EXODUS_EXODUS_H
 
 class CBlockIndex;
 class CCoinsView;
@@ -85,7 +85,7 @@ enum FILETYPES {
 #define PKT_ERROR_SEND_ALL    (-83000)
 #define PKT_ERROR_SIGMA       (-84000)
 
-#define EXODUS_PROPERTY_XZC   0
+#define EXODUS_PROPERTY_GXX   0
 #define EXODUS_PROPERTY_EXODUS   1
 #define EXODUS_PROPERTY_TEXODUS  2
 
@@ -337,4 +337,4 @@ void PrintFreezeState();
 
 }
 
-#endif // ZCOIN_EXODUS_EXODUS_H
+#endif // GRAVITYCOIN_EXODUS_EXODUS_H

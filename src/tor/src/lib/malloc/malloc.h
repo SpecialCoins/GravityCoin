@@ -48,12 +48,12 @@ void tor_free_(void *mem);
     raw_free(*tor_free__tmpvar);                               \
     *tor_free__tmpvar=NULL;                                    \
   STMT_END
-#else /* !defined(__GNUC__) */
+#else
 #define tor_free(p) STMT_BEGIN                                 \
   raw_free(p);                                                 \
   (p)=NULL;                                                    \
   STMT_END
-#endif /* defined(__GNUC__) */
+#endif
 
 #define tor_malloc(size)       tor_malloc_(size)
 #define tor_malloc_zero(size)  tor_malloc_zero_(size)

@@ -15,10 +15,10 @@
 #include "coin_containers.h"
 
 //tests
-namespace sigma_mintspend_many { class sigma_mintspend_many; }
-namespace sigma_mintspend { class sigma_mintspend_test; }
-namespace sigma_partialspend_mempool_tests { class partialspend; }
-namespace zerocoin_tests3_v3 { class zerocoin_mintspend_v3; }
+namespace sigma_mintspend_many { struct sigma_mintspend_many; }
+namespace sigma_mintspend { struct sigma_mintspend_test; }
+namespace sigma_partialspend_mempool_tests { struct partialspend; }
+namespace zerocoin_tests3_v3 { struct zerocoin_mintspend_v3; }
 
 namespace sigma {
 
@@ -45,9 +45,6 @@ public:
 };
 
 bool IsSigmaAllowed();
-bool IsSigmaAllowed(int height);
-
-bool IsRemintWindow(int height);
 
 secp_primitives::GroupElement ParseSigmaMintScript(const CScript& script);
 std::pair<std::unique_ptr<sigma::CoinSpend>, uint32_t> ParseSigmaSpend(const CTxIn& in);
@@ -56,14 +53,13 @@ CAmount GetSpendAmount(const CTransaction& tx);
 bool CheckSigmaBlock(CValidationState &state, const CBlock& block);
 
 bool CheckSigmaTransaction(
-  const CTransaction &tx,
+    const CTransaction &tx,
 	CValidationState &state,
 	uint256 hashTx,
 	bool isVerifyDB,
 	int nHeight,
-  bool isCheckWallet,
-  bool fStatefulSigmaCheck,
-  CSigmaTxInfo *zerocoinTxInfo);
+    bool isCheckWallet,
+    CSigmaTxInfo *sigmaTxInfo);
 
 void DisconnectTipSigma(CBlock &block, CBlockIndex *pindexDelete);
 
@@ -160,28 +156,22 @@ public:
 
     // Check if there is a conflicting tx in the blockchain or mempool
     bool CanAddSpendToMempool(const Scalar& coinSerial);
-
     bool CanAddMintToMempool(const GroupElement& pubCoin);
 
     // Add spend into the mempool.
     // Check if there is a coin with such serial in either blockchain or mempool
     bool AddSpendToMempool(const Scalar &coinSerial, uint256 txHash);
+    void AddMintsToMempool(const vector<GroupElement>& pubCoins);
+    void RemoveMintFromMempool(const GroupElement& pubCoin);
 
-    // Add spend into the mempool.
     // Check if there is a coin with such serial in either blockchain or mempool
     bool AddSpendToMempool(const vector<Scalar> &coinSerials, uint256 txHash);
-
-    void AddMintsToMempool(const vector<GroupElement>& pubCoins);
-
-    void RemoveMintFromMempool(const GroupElement& pubCoin);
 
     // Get conflicting tx hash by coin serial number
     uint256 GetMempoolConflictingTxHash(const Scalar& coinSerial);
 
     // Remove spend from the mempool (usually as the result of adding tx to the block)
     void RemoveSpendFromMempool(const Scalar& coinSerial);
-
-
 
     static CSigmaState* GetState();
 
@@ -206,9 +196,7 @@ private:
 
     // serials of spends currently in the mempool mapped to tx hashes
     std::unordered_map<Scalar, uint256, CScalarHash> mempoolCoinSerials;
-
     std::unordered_set<GroupElement> mempoolMints;
-
     std::atomic<bool> surgeCondition;
 
     struct Containers {
@@ -225,6 +213,7 @@ private:
         mint_info_container const & GetMints() const;
         spend_info_container const & GetSpends() const;
         bool IsSurgeCondition() const;
+
     private:
         // Set of all minted pubCoin values, keyed by the public coin.
         // Used for checking if the given coin already exists.

@@ -11,8 +11,6 @@
 #include <QWidget>
 #include <memory>
 
-#include "walletmodel.h"
-
 #include <QSettings>
 
 class ClientModel;
@@ -46,7 +44,6 @@ public:
 public Q_SLOTS:
     void setBalance(const CAmount& balance, const CAmount& unconfirmedBalance, const CAmount& immatureBalance,
                     const CAmount& watchOnlyBalance, const CAmount& watchUnconfBalance, const CAmount& watchImmatureBalance);
-    void setSigmaBalance();
     //void updateExodus();
     //void reinitExodus();
 
@@ -65,8 +62,6 @@ private:
     CAmount currentWatchOnlyBalance;
     CAmount currentWatchUnconfBalance;
     CAmount currentWatchImmatureBalance;
-    CAmount currentSigmaBalance;
-    CAmount currentSigmaUnconfirmedBalance;
 
     QSettings settings;
 
@@ -79,7 +74,6 @@ private Q_SLOTS:
     void handleEnabledTorChanged();
     void updateAlerts(const QString &warnings);
     void updateWatchOnlyLabels(bool showWatchOnly);
-    void updateCoins(const std::vector<CMintMeta>& spendable, const std::vector<CMintMeta>& pending);
 };
 
 #endif // BITCOIN_QT_OVERVIEWPAGE_H

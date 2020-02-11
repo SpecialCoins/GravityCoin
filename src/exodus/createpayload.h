@@ -1,5 +1,5 @@
-#ifndef ZCOIN_EXODUS_CREATEPAYLOAD_H
-#define ZCOIN_EXODUS_CREATEPAYLOAD_H
+#ifndef GRAVITYCOIN_EXODUS_CREATEPAYLOAD_H
+#define GRAVITYCOIN_EXODUS_CREATEPAYLOAD_H
 
 #include "sp.h"
 #include "sigma.h"
@@ -45,4 +45,4 @@ std::vector<unsigned char> CreatePayload_DeactivateFeature(uint16_t featureId);
 std::vector<unsigned char> CreatePayload_ActivateFeature(uint16_t featureId, uint32_t activationBlock, uint32_t minClientVersion);
 std::vector<unsigned char> CreatePayload_CreateDenomination(uint32_t propertyId, uint64_t value);
 
-#endif // ZCOIN_EXODUS_CREATEPAYLOAD_H
+#endif // GRAVITYCOIN_EXODUS_CREATEPAYLOAD_H

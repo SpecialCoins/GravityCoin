@@ -11,4 +11,4 @@
 
 void tor_trace_init(void);
 
-#endif /* !defined(TOR_TRACE_TRACE_H) */
+#endif // TOR_TRACE_TRACE_H

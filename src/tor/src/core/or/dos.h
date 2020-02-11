@@ -134,7 +134,7 @@ MOCK_DECL(STATIC unsigned int, get_param_cc_enabled,
 MOCK_DECL(STATIC unsigned int, get_param_conn_enabled,
           (const networkstatus_t *ns));
 
-#endif /* defined(DOS_PRIVATE) */
+#endif /* TOR_DOS_PRIVATE */
 
-#endif /* !defined(TOR_DOS_H) */
+#endif /* TOR_DOS_H */
 
