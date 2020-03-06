@@ -202,6 +202,7 @@ extern UniValue xnode(const UniValue& params, bool fHelp);
 extern UniValue xnodelist(const UniValue& params, bool fHelp);
 extern UniValue xnodebroadcast(const UniValue& params, bool fHelp);
 extern UniValue xnsync(const UniValue& params, bool fHelp);
+extern UniValue getmasternodecount(const UniValue& params, bool fHelp);
 
 extern void EnsureWalletIsUnlocked();
 

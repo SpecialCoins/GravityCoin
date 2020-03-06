@@ -818,3 +818,30 @@ UniValue xnodebroadcast(const UniValue &params, bool fHelp) {
 
     return NullUniValue;
 }
+UniValue getmasternodecount (const UniValue& params, bool fHelp) {
+    if (fHelp || (params.size() > 0))
+        throw runtime_error(
+            "getmasternodecount\n"
+            "\nGet masternode count values\n"
+
+            "\nResult:\n"
+            "{\n"
+            "  \"total\": n,        (numeric) Total masternodes\n"
+            "  \"enabled\": n,      (numeric) Enabled masternodes\n"
+            "}\n"
+            "\nExamples:\n" +
+            HelpExampleCli("getmasternodecount", "") + HelpExampleRpc("getmasternodecount", ""));
+
+    UniValue obj(UniValue::VOBJ);
+    int nCount = 0;
+
+    if (chainActive.Tip())
+        mnodeman.GetNextXnodeInQueueForPayment(chainActive.Tip()->nHeight, true, nCount);
+
+    obj.push_back(Pair("total", mnodeman.size()));
+    obj.push_back(Pair("enabled", mnodeman.CountEnabled()));
+    return obj;
+}
+
+
+
