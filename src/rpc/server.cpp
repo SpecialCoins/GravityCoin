@@ -282,7 +282,7 @@ static const CRPCCommand vRPCCommands[] =
     { "gravitycoin",               "xnsync",                &xnsync,                 true  },
     { "gravitycoin",               "xnodelist",             &xnodelist,              true  },
     { "gravitycoin",               "xnodebroadcast",        &xnodebroadcast,         true  },
-    { "gravitycoin",               "masternodecount",       &masternodecount,        true  },
+    { "gravitycoin",               "getmasternodecount",    &getmasternodecount,     true  },
     { "gravitycoin",               "getpoolinfo",           &getpoolinfo,            true  },
     { "GravityCoin",               "spork",                 &spork,                  true  },
 };
