@@ -594,19 +594,20 @@ void ReadConfigFile(map<string, string>& mapSettingsRet,
             if (configFile != NULL)
             {
                 std::string strHeader =
-                        "#listen=1\n"
-                        "#server=1\n"
-                        "#rpcpassword=\n"
-                        "#rpcusername=\n"
-                        "#maxconnections=16\n"
-                        "#connect=\n"
-                        "#addnode=\n"
-                        "#rescan=0\n"
-                        "#reindex=0\n"
-                        "#reindex-chainstate=0\n"
-                        "#xnode=1\n"
-                        "#xnodeprivkey=123123123123123123123123 ## Replace with your xnode private key\n"
-                        "#externalip=123.123.123.123:29100 ## Replace with your node external IP\n";
+						"#listen=1\n"
+						"#server=1\n"
+						"#daemon=1\n"
+						"#rpcuser=xxxx\n"
+						"#rpcpassword=xxxx\n"
+						"#rpcallowip=127.0.0.1\n"
+						"#maxconnections=150\n"
+						"addnode=51.77.145.35\n"
+						"addnode=51.91.156.251\n"
+						"addnode=51.91.156.249\n"
+						"addnode=51.91.156.252\n"
+						"#xnode=1\n"
+						"#xnodeprivkey=123123123123123123123123 ## Replace with your bznode private key\n"
+						"#externalip=123.123.123.123:29100 ## Replace with your node external IP\n";
 
                 fwrite(strHeader.c_str(), std::strlen(strHeader.c_str()), 1, configFile);
                 fclose(configFile);
