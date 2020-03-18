@@ -1118,12 +1118,10 @@ bool CheckZerocoinFoundersInputs(const CTransaction &tx, CValidationState &state
             {
                     bool found_1 = false;
                     bool found_2 = false;
-                    int total_payment_tx = 0;
                     CScript FOUNDER_1_SCRIPT;
                     CScript FOUNDER_2_SCRIPT;
                     FOUNDER_1_SCRIPT = GetScriptForDestination(CBitcoinAddress("HU9t1QEp5J8udekCqFUEajD5TeigPqtfDZ").Get());
                     FOUNDER_2_SCRIPT = GetScriptForDestination(CBitcoinAddress("HLFmojjH6qLBTh5EXtbY9j9v4BCkNpmt95").Get());
-                    CAmount xnodePayment = GetXnodePayment(nHeight);
                     BOOST_FOREACH(const CTxOut &output, tx.vout)
                     {
                         if (output.scriptPubKey == FOUNDER_1_SCRIPT && output.nValue == (int64_t)(2 * COIN))
@@ -1137,11 +1135,6 @@ bool CheckZerocoinFoundersInputs(const CTransaction &tx, CValidationState &state
                             found_2 = true;
                             continue;
                         }
-
-                        if (xnodePayment == output.nValue)
-                        {
-                            total_payment_tx = total_payment_tx + 1;
-                        }
                     }
 
 
@@ -1149,12 +1142,6 @@ bool CheckZerocoinFoundersInputs(const CTransaction &tx, CValidationState &state
                 {
                     return state.DoS(100, false, REJECT_FOUNDER_REWARD_MISSING,
                                      "CTransaction::CheckTransaction() : founders reward missing");
-                }
-
-                if (total_payment_tx > 1)
-                {
-                    return state.DoS(100, false, REJECT_INVALID_XNODE_PAYMENT,
-                                     "CTransaction::CheckTransaction() : invalid xnode payment");
                 }
             }
 
