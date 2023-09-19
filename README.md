@@ -1,4 +1,5 @@
-GravityCoin [GXX] (Sigma protocol)
+GravityCoin [GXX] (Sigma protocol) -- discontinued
+
 ===============================
 
 
